@@ -1,0 +1,57 @@
+server:
+  port: 8080  # Фиксированный порт для внешнего доступа
+
+spring:
+  application:
+    name: gateway-server
+
+  config:
+    import: "configserver:"
+
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
+
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      routes:
+        - id: main-service
+          uri: lb://main-service  # lb:// означает LoadBalancer через Eureka
+          predicates:
+            - Path=/admin/**, /users/**, /categories/**, /compilations/**, /events/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: mainService
+                fallbackUri: forward:/fallback/main
+
+        - id: stats-service
+          uri: lb://stats-server
+          predicates:
+            - Path=/stats/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: statsService
+                fallbackUri: forward:/fallback/stats
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.server: DEBUG
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    instance-id: ${spring.cloud.client.hostname}:${spring.application.name}:${random.value}
+    preferIpAddress: false
