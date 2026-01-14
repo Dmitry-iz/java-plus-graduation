@@ -1,57 +1,51 @@
 server:
-  port: 8080  # Фиксированный порт для внешнего доступа
+  port: 8080
 
 spring:
   application:
     name: gateway-server
 
-  config:
-    import: "configserver:"
-
   cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
-
     gateway:
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
+          predicates:
+            - name: Path
+              args:
+                pattern: "'/api/'+serviceId.toLowerCase()+'/**'"
+          filters:
+            - name: RewritePath
+              args:
+                regexp: "'/api/' + serviceId.toLowerCase() + '/(?<remaining>.*)'"
+                replacement: "'/${remaining}'"
 
+      # Дополнительные ручные маршруты для backward compatibility
       routes:
-        - id: main-service
-          uri: lb://main-service  # lb:// означает LoadBalancer через Eureka
+        - id: main-service-legacy
+          uri: lb://MAIN-SERVICE
           predicates:
-            - Path=/admin/**, /users/**, /categories/**, /compilations/**, /events/**
+            - Path=/admin/**,/users/**,/events/**,/categories/**,/compilations/**,/comments/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: mainService
-                fallbackUri: forward:/fallback/main
+            - StripPrefix=0
 
-        - id: stats-service
-          uri: lb://stats-server
+        - id: stats-service-legacy
+          uri: lb://STATS-SERVER
           predicates:
-            - Path=/stats/**
+            - Path=/stats/**,/hit/**
           filters:
-            - name: CircuitBreaker
-              args:
-                name: statsService
-                fallbackUri: forward:/fallback/stats
+            - StripPrefix=0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,routes
+  endpoint:
+    gateway:
+      enabled: true
 
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.server: DEBUG
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    instance-id: ${spring.cloud.client.hostname}:${spring.application.name}:${random.value}
-    preferIpAddress: false

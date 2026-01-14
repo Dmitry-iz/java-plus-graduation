@@ -9,12 +9,18 @@ spring:
         native:
           searchLocations:
             - classpath:config/{application}
+            - classpath:config/{application}/{profile}
+
+  sql:
+    init:
+      mode: always  # Config Server тоже может иметь свою БД, если нужно
+
 server:
   port: 8888
+
 eureka:
-  instance:
-    hostname: localhost  # Явно указать localhost
-    preferIpAddress: false
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true

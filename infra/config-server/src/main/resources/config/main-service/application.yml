@@ -2,56 +2,39 @@ server:
   port: 0  # Динамический порт
 
 spring:
-  application:
-    name: main-service
-
-  config:
-    import: "configserver:"
-
-  cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
-
-  # Hibernate создаст таблицы автоматически
   jpa:
     hibernate:
-      ddl-auto: update  # или create для первого запуска
+      ddl-auto: validate  # Проверяет соответствие сущностей и БД
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-        jdbc:
-          time_zone: Europe/Moscow
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   datasource:
-    driverClassName: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/ewm
     username: ewm
     password: ewm
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
+      minimum-idle: 5
+
+  # Если у вас есть schema.sql в main-service/src/main/resources/
+  sql:
+    init:
+      mode: always  # Всегда запускать SQL инициализацию
+      schema-locations: classpath:schema.sql
 
   mvc:
     format:
       date-time: yyyy-MM-dd HH:mm:ss
 
-# Статистика через Eureka
-stats-server:
-  url: http://stats-server:9090  # Имя сервиса из Eureka
+stats:
+  server:
+    url: http://stats-server  # Имя сервиса из Eureka
 
 logging:
   level:
-    ru.practicum: TRACE
-    org.springframework.orm.jpa: DEBUG
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    instance-id: ${spring.cloud.client.hostname}:${spring.application.name}:${random.value}
-    preferIpAddress: false
+    ru.practicum: DEBUG
+    org.hibernate.SQL: DEBUG
