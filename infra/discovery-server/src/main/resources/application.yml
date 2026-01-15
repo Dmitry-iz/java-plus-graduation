@@ -1,5 +1,5 @@
 server:
-  port: 8761  # ФИКСИРОВАННЫЙ порт для Eureka!
+  port: 8761
 
 spring:
   application:
@@ -9,7 +9,7 @@ eureka:
   instance:
     hostname: localhost
   client:
-    registerWithEureka: false  # Eureka не регистрируется сама в себе
-    fetchRegistry: false       # Eureka не получает реестр от других
+    registerWithEureka: false
+    fetchRegistry: false
     serviceUrl:
       defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/

@@ -1,5 +1,5 @@
 server:
-  port: 8080  # Фиксированный порт согласно ТЗ
+  port: 8080
 
 spring:
   application:
@@ -13,7 +13,6 @@ spring:
         service-id: config-server
       fail-fast: false
 
-# Eureka на ФИКСИРОВАННОМ порту 8761
 eureka:
   client:
     serviceUrl:

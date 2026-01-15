@@ -13,12 +13,10 @@ public class RetryConfig {
     public RetryTemplate retryTemplate() {
         RetryTemplate retryTemplate = new RetryTemplate();
 
-        // Настройка паузы между попытками (3 секунды)
         FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
         fixedBackOffPolicy.setBackOffPeriod(3000L);
         retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
 
-        // Максимум 3 попытки
         MaxAttemptsRetryPolicy retryPolicy = new MaxAttemptsRetryPolicy();
         retryPolicy.setMaxAttempts(3);
         retryTemplate.setRetryPolicy(retryPolicy);

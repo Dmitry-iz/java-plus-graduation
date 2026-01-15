@@ -1,5 +1,5 @@
 server:
-  port: 0  # Динамический порт
+  port: 0
 
 spring:
   application:
@@ -14,7 +14,6 @@ spring:
             - classpath:config/{application}
             - classpath:config/{application}/{profile}
 
-# Eureka на ФИКСИРОВАННОМ порту 8761
 eureka:
   client:
     serviceUrl:

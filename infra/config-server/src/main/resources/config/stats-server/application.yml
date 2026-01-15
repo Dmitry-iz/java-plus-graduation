@@ -1,4 +1,3 @@
-# ТОЛЬКО настройки приложения Spring
 spring:
   jpa:
     hibernate:

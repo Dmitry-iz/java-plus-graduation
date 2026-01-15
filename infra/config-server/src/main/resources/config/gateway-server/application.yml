@@ -1,4 +1,3 @@
-# БЕЗ server.port и eureka!
 spring:
   cloud:
     gateway:

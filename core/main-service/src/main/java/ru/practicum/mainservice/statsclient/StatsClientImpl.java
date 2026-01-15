@@ -1,63 +1,11 @@
-//package ru.practicum.mainservice.statsclient;
-//
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.stereotype.Component;
-//import ru.practicum.statsclient.client.StatsClient;
-//
-//@Component
-//public class StatsClientImpl extends StatsClient {
-//
-//    @Autowired
-//    public StatsClientImpl(@Value("${stats.server.url}") String serverUrl) {
-//        super(serverUrl);
-//    }
-//}
-//
-//package ru.practicum.mainservice.statsclient;
-//
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.stereotype.Component;
-//import ru.practicum.statsclient.client.StatsClient;
-//
-//@Component
-//public class StatsClientImpl extends StatsClient {
-//
-//    @Autowired
-//    public StatsClientImpl(@Value("${stats.server.url}") String serverUrl) {
-//        super(serverUrl);
-//    }
-////}
-//
-//package ru.practicum.mainservice.statsclient;
-//
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.cloud.client.loadbalancer.LoadBalanced;
-//import org.springframework.stereotype.Component;
-//import org.springframework.web.client.RestTemplate;
-//import ru.practicum.statsclient.client.StatsClient;
-//
-//@Component
-//public class StatsClientImpl extends StatsClient {
-//
-//    @Autowired
-//    public StatsClientImpl(@LoadBalanced RestTemplate restTemplate) {
-//
-//        super(restTemplate, "stats-server");
-//    }
-//}
-
-
 package ru.practicum.mainservice.statsclient;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -69,6 +17,7 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -81,13 +30,8 @@ public class StatsClientImpl {
 
     private final DiscoveryClient discoveryClient;
     private final RetryTemplate retryTemplate;
-    private final RestTemplate restTemplate; // Используется @Primary бин
-    // ИЛИ с @Qualifier, если хотите быть более явными:
-    // private final @Qualifier("loadBalancedRestTemplate") RestTemplate restTemplate;
+    private final @Qualifier("simpleRestTemplate") RestTemplate simpleRestTemplate;
 
-    /**
-     * Сохраняет информацию о просмотре события
-     */
     public void saveHit(EndpointHitDTO endpointHitDTO) {
         try {
             URI uri = buildUri("/hit");
@@ -97,17 +41,16 @@ public class StatsClientImpl {
             HttpEntity<EndpointHitDTO> requestEntity = new HttpEntity<>(endpointHitDTO, headers);
 
             log.debug("Sending hit to stats server: {}", endpointHitDTO);
-            restTemplate.postForEntity(uri, requestEntity, Void.class);
-            log.debug("Hit successfully sent to stats server");
+            ResponseEntity<Void> response = simpleRestTemplate.exchange(
+                    uri, HttpMethod.POST, requestEntity, Void.class);
+
+            log.debug("Hit successfully sent to stats server. Status: {}", response.getStatusCode());
 
         } catch (Exception e) {
             log.error("Failed to save hit to stats server: {}", e.getMessage(), e);
         }
     }
 
-    /**
-     * Сохраняет список просмотров (пакетно)
-     */
     public void saveHits(List<EndpointHitDTO> hits) {
         if (hits == null || hits.isEmpty()) {
             return;
@@ -121,13 +64,12 @@ public class StatsClientImpl {
             HttpEntity<List<EndpointHitDTO>> requestEntity = new HttpEntity<>(hits, headers);
 
             log.debug("Sending batch of {} hits to stats server", hits.size());
-            restTemplate.postForEntity(uri, requestEntity, Void.class);
+            simpleRestTemplate.exchange(uri, HttpMethod.POST, requestEntity, Void.class);
             log.debug("Batch hits successfully sent to stats server");
 
         } catch (Exception e) {
             log.warn("Batch save failed, falling back to single saves: {}", e.getMessage());
 
-            // Fallback: сохраняем по одному
             for (EndpointHitDTO hit : hits) {
                 try {
                     saveHit(hit);
@@ -138,9 +80,6 @@ public class StatsClientImpl {
         }
     }
 
-    /**
-     * Получает статистику просмотров
-     */
     public List<ViewStatsDTO> getStats(LocalDateTime start, LocalDateTime end,
                                        List<String> uris, Boolean unique) {
         validateDates(start, end);
@@ -151,21 +90,28 @@ public class StatsClientImpl {
             log.debug("Getting stats from stats server: start={}, end={}, uris={}, unique={}",
                     start, end, uris, unique);
 
-            ViewStatsDTO[] response = restTemplate.getForObject(uri, ViewStatsDTO[].class);
-            List<ViewStatsDTO> stats = response != null ? Arrays.asList(response) : List.of();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            log.debug("Received {} stats records from stats server", stats.size());
-            return stats;
+            ResponseEntity<ViewStatsDTO[]> response = simpleRestTemplate.exchange(
+                    uri, HttpMethod.GET, requestEntity, ViewStatsDTO[].class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                List<ViewStatsDTO> stats = Arrays.asList(response.getBody());
+                log.debug("Received {} stats records from stats server", stats.size());
+                return stats;
+            } else {
+                log.warn("No stats returned from stats server. Status: {}", response.getStatusCode());
+                return Collections.emptyList();
+            }
 
         } catch (Exception e) {
             log.error("Failed to get stats from stats server: {}", e.getMessage(), e);
-            return List.of();
+            return Collections.emptyList();
         }
     }
 
-    /**
-     * Строит URI для получения статистики
-     */
     private URI buildStatsUri(LocalDateTime start, LocalDateTime end,
                               List<String> uris, Boolean unique) {
         return retryTemplate.execute(context -> {
@@ -179,16 +125,15 @@ public class StatsClientImpl {
                     .queryParam("unique", unique);
 
             if (uris != null && !uris.isEmpty()) {
-                uriBuilder.queryParam("uris", String.join(",", uris));
+                for (String uri : uris) {
+                    uriBuilder.queryParam("uris", uri);
+                }
             }
 
             return uriBuilder.build().toUri();
         });
     }
 
-    /**
-     * Строит базовый URI для stats-сервера
-     */
     private URI buildUri(String path) {
         return retryTemplate.execute(context -> {
             ServiceInstance instance = getStatsServiceInstance();
@@ -196,9 +141,6 @@ public class StatsClientImpl {
         });
     }
 
-    /**
-     * Получает инстанс stats-сервера из Eureka
-     */
     private ServiceInstance getStatsServiceInstance() {
         List<ServiceInstance> instances = discoveryClient.getInstances(STATS_SERVICE_ID);
 
@@ -208,16 +150,12 @@ public class StatsClientImpl {
             throw new IllegalStateException(errorMsg);
         }
 
-        // Берем первый доступный инстанс
         ServiceInstance instance = instances.get(0);
         log.debug("Found stats service instance: {}:{}", instance.getHost(), instance.getPort());
 
         return instance;
     }
 
-    /**
-     * Валидация дат
-     */
     private void validateDates(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             throw new IllegalArgumentException("Dates must not be null");
