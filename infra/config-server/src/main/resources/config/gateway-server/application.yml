@@ -1,27 +1,11 @@
-server:
-  port: 8080
-
+# БЕЗ server.port и eureka!
 spring:
-  application:
-    name: gateway-server
-
   cloud:
     gateway:
       discovery:
         locator:
-          enabled: true
+          enabled: false
           lower-case-service-id: true
-          predicates:
-            - name: Path
-              args:
-                pattern: "'/api/'+serviceId.toLowerCase()+'/**'"
-          filters:
-            - name: RewritePath
-              args:
-                regexp: "'/api/' + serviceId.toLowerCase() + '/(?<remaining>.*)'"
-                replacement: "'/${remaining}'"
-
-      # Дополнительные ручные маршруты для backward compatibility
       routes:
         - id: main-service-legacy
           uri: lb://MAIN-SERVICE
@@ -29,7 +13,6 @@ spring:
             - Path=/admin/**,/users/**,/events/**,/categories/**,/compilations/**,/comments/**
           filters:
             - StripPrefix=0
-
         - id: stats-service-legacy
           uri: lb://STATS-SERVER
           predicates:
@@ -45,7 +28,3 @@ management:
   endpoint:
     gateway:
       enabled: true
-
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG

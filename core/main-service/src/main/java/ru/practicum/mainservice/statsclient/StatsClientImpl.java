@@ -43,7 +43,6 @@ public class StatsClientImpl extends StatsClient {
 
     @Autowired
     public StatsClientImpl(@LoadBalanced RestTemplate restTemplate) {
-        // Используем конструктор с RestTemplate и именем сервиса
         super(restTemplate, "stats-server");
     }
 }

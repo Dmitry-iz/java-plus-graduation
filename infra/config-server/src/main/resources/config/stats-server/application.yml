@@ -1,6 +1,4 @@
-server:
-  port: 0  # Динамический порт
-
+# ТОЛЬКО настройки приложения Spring
 spring:
   jpa:
     hibernate:
@@ -20,7 +18,6 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
 
-  # Если у вас есть schema.sql в stats-server/src/main/resources/
   sql:
     init:
       mode: always

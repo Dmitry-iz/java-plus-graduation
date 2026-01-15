@@ -1,3 +1,6 @@
+server:
+  port: 8080  # Фиксированный порт согласно ТЗ
+
 spring:
   application:
     name: gateway-server
@@ -8,8 +11,14 @@ spring:
       discovery:
         enabled: true
         service-id: config-server
+      fail-fast: false
 
+# Eureka на ФИКСИРОВАННОМ порту 8761
 eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 10

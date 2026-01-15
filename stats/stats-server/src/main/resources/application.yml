@@ -1,3 +1,6 @@
+server:
+  port: 0  # Динамический порт
+
 spring:
   application:
     name: stats-server
@@ -10,10 +13,12 @@ spring:
         service-id: config-server
       fail-fast: false
 
+# Eureka на ФИКСИРОВАННОМ порту 8761
 eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
   instance:
     preferIpAddress: true
+    instance-id: ${spring.application.name}:${random.int[10000,99999]}
     lease-renewal-interval-in-seconds: 10

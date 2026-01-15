@@ -1,11 +1,15 @@
 server:
-  port: 8761
+  port: 8761  # ФИКСИРОВАННЫЙ порт для Eureka!
+
+spring:
+  application:
+    name: discovery-server
 
 eureka:
   instance:
     hostname: localhost
   client:
-    registerWithEureka: false
-    fetchRegistry: false
+    registerWithEureka: false  # Eureka не регистрируется сама в себе
+    fetchRegistry: false       # Eureka не получает реестр от других
     serviceUrl:
       defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
