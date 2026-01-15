@@ -22,7 +22,7 @@ spring:
 
 stats:
   server:
-    url: http://stats-server
+    url: http://STATS-SERVER
 
 logging:
   level:
