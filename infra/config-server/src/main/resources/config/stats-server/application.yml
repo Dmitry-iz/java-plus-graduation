@@ -7,7 +7,6 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
   datasource:
     url: jdbc:postgresql://localhost:5433/stats
     username: test
@@ -16,11 +15,6 @@ spring:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
 
   mvc:
     format:

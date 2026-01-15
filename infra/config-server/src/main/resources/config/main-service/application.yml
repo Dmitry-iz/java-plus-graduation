@@ -11,10 +11,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/ewm
     username: ewm
     password: ewm
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
+
   mvc:
     format:
       date-time: yyyy-MM-dd HH:mm:ss
