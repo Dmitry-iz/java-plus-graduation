@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.ViewStatsDTO;
 import ru.practicum.mainservice.category.model.Category;
 import ru.practicum.mainservice.category.repository.CategoryRepository;
+
 import ru.practicum.mainservice.event.dto.EventCreateDto;
 import ru.practicum.mainservice.event.dto.EventDtoOut;
 import ru.practicum.mainservice.event.dto.EventShortDtoOut;
@@ -28,6 +29,7 @@ import ru.practicum.mainservice.exception.NoAccessException;
 import ru.practicum.mainservice.exception.NotFoundException;
 import ru.practicum.mainservice.participation.repository.ParticipationRequestRepository;
 import ru.practicum.mainservice.statsclient.StatsClientImpl;
+import ru.practicum.mainservice.user.dto.UserDtoOut;
 import ru.practicum.mainservice.user.model.User;
 import ru.practicum.mainservice.user.repository.UserRepository;
 
@@ -43,6 +45,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ru.practicum.mainservice.constants.Constants.STATS_EVENTS_URL;
+
+
 
 @Slf4j
 @Service

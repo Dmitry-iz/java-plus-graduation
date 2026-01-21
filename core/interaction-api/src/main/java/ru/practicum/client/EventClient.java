@@ -1,0 +1,35 @@
+// interaction-api/src/main/java/ru/practicum/client/EventClient.java
+package ru.practicum.client;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import ru.practicum.dto.event.EventDtoOut;
+import ru.practicum.dto.event.EventShortDtoOut;
+
+import java.util.List;
+
+@FeignClient(name = "event-service", path = "/internal/events")
+public interface EventClient {
+
+    @GetMapping("/{eventId}")
+    EventDtoOut getEventById(@PathVariable Long eventId); // ← Возвращает EventDtoOut с состоянием
+
+    @GetMapping("/short/{eventId}")
+    EventShortDtoOut getShortEventById(@PathVariable Long eventId);
+
+    @GetMapping("/exists/{eventId}")
+    Boolean eventExists(@PathVariable Long eventId);
+
+    @GetMapping("/batch")
+    List<EventShortDtoOut> getEventsByIds(@RequestParam List<Long> eventIds);
+
+    @GetMapping("/batch/full")
+    List<EventDtoOut> getFullEventsByIds(@RequestParam List<Long> eventIds);
+
+    @PutMapping("/{eventId}/increment")
+    void incrementConfirmedRequests(@PathVariable Long eventId,
+                                    @RequestParam(required = false, defaultValue = "1") int count);
+}

@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import ru.practicum.mainservice.category.model.Category;
-import ru.practicum.mainservice.user.model.User;
+//import ru.practicum.mainservice.user.model.User;
 
 import java.time.LocalDateTime;
 
@@ -51,10 +51,13 @@ public class Event {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ToString.Exclude
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "initiator_id", nullable = false)
-    private User initiator;
+    @Column(name = "initiator_id", nullable = false)
+    private Long initiatorId;  // Храним только ID
+
+//    @ToString.Exclude
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "initiator_id", nullable = false)
+//    private User initiator;
 
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
