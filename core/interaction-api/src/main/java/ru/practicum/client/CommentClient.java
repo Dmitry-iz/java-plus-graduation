@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "comment-service", path = "/internal/comments")
+@FeignClient(name = "comment-service",contextId = "commentClient", path = "/internal/comments")
 public interface CommentClient {
 
     @GetMapping("/count/{eventId}")

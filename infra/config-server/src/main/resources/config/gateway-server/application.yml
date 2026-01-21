@@ -3,19 +3,121 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: false
+          enabled: false  # ← ВАЖНО: отключить авто-обнаружение!
           lower-case-service-id: true
       routes:
-        - id: main-service-legacy
-          uri: lb://MAIN-SERVICE
+        # ========== USER SERVICE ==========
+        - id: user-service-admin
+          uri: lb://USER-SERVICE
           predicates:
-            - Path=/admin/**,/users/**,/events/**,/categories/**,/compilations/**,/comments/**
+            - Path=/admin/users/**, /admin/users
           filters:
             - StripPrefix=0
-        - id: stats-service-legacy
+
+        # ========== EVENT SERVICE ==========
+        # Категории публичные
+        - id: event-service-categories-public
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/categories/**, /categories
+          filters:
+            - StripPrefix=0
+
+        # Категории админские
+        - id: event-service-categories-admin
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/categories/**, /admin/categories
+          filters:
+            - StripPrefix=0
+
+        # События публичные
+        - id: event-service-events-public
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/events/**, /events
+          filters:
+            - StripPrefix=0
+
+        # События админские
+        - id: event-service-events-admin
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/events/**, /admin/events
+          filters:
+            - StripPrefix=0
+
+        # События приватные (пользовательские)
+        - id: event-service-events-private
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/users/*/events/**, /users/*/events
+          filters:
+            - StripPrefix=0
+
+        # Подборки публичные
+        - id: event-service-compilations-public
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/compilations/**, /compilations
+          filters:
+            - StripPrefix=0
+
+        # Подборки админские
+        - id: event-service-compilations-admin
+          uri: lb://EVENT-SERVICE
+          predicates:
+            - Path=/admin/compilations/**, /admin/compilations
+          filters:
+            - StripPrefix=0
+
+        # ========== REQUEST SERVICE ==========
+        # Заявки пользовательские
+        - id: request-service-requests-private
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/*/requests/**, /users/*/requests
+          filters:
+            - StripPrefix=0
+
+        # Заявки на события (приватные)
+        - id: request-service-event-requests-private
+          uri: lb://REQUEST-SERVICE
+          predicates:
+            - Path=/users/*/events/*/requests/**, /users/*/events/*/requests
+          filters:
+            - StripPrefix=0
+
+        # ========== COMMENT SERVICE ==========
+        # Комментарии админские
+        - id: comment-service-comments-admin
+          uri: lb://COMMENT-SERVICE
+          predicates:
+            - Path=/admin/comments/**, /admin/comments
+          filters:
+            - StripPrefix=0
+
+        # Комментарии публичные (к событиям)
+        - id: comment-service-comments-public
+          uri: lb://COMMENT-SERVICE
+          predicates:
+            - Path=/events/*/comments/**, /events/*/comments
+          filters:
+            - StripPrefix=0
+
+        # Комментарии приватные (пользовательские)
+        - id: comment-service-comments-private
+          uri: lb://COMMENT-SERVICE
+          predicates:
+            - Path=/users/*/comments/**, /users/*/comments, /users/*/events/*/comments/**, /users/*/events/*/comments
+          filters:
+            - StripPrefix=0
+
+        # ========== STATS SERVICE ==========
+        - id: stats-service
           uri: lb://STATS-SERVER
           predicates:
-            - Path=/stats/**,/hit/**
+            - Path=/stats/**, /stats, /hit/**, /hit
           filters:
             - StripPrefix=0
 

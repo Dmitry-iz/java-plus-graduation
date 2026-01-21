@@ -11,7 +11,7 @@ import ru.practicum.dto.event.EventShortDtoOut;
 
 import java.util.List;
 
-@FeignClient(name = "event-service", path = "/internal/events")
+@FeignClient(name = "event-service", contextId = "eventClient", path = "/internal/events")
 public interface EventClient {
 
     @GetMapping("/{eventId}")

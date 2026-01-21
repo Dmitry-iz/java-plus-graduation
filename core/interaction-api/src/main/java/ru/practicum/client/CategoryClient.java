@@ -9,7 +9,7 @@ import ru.practicum.dto.category.CategoryDtoOut;
 
 import java.util.List;
 
-@FeignClient(name = "event-service", path = "/internal/categories")
+@FeignClient(name = "event-service",contextId = "categoryClient", path = "/internal/categories")
 public interface CategoryClient {
 
     @GetMapping("/{categoryId}")
