@@ -37,12 +37,48 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final EventClient eventClient;
     private final ParticipationRequestRepository requestRepository;
 
+//    @Override
+//    @Transactional
+//    public ParticipationRequestDto createRequest(Long userId, Long eventId) {
+//        log.info("Пользователь {} пытается создать запрос участия для события {}", userId, eventId);
+//
+//        // Проверяем существование пользователя - как в монолите
+//        if (!userExists(userId)) {
+//            throw new NotFoundException("User", userId);
+//        }
+//
+//        // Получаем событие
+//        EventDtoOut event = eventClient.getEventById(eventId);
+//        if (event == null) {
+//            throw new NotFoundException("Event", eventId);
+//        }
+//
+//        // Проверки из монолита:
+//        checkRequestNotExists(userId, eventId);
+//        checkNotEventInitiator(userId, event);
+//        checkEventIsPublished(event);
+//        checkParticipantLimit(event, eventId);
+//
+//        RequestStatus status = determineRequestStatus(event);
+//
+//        ParticipationRequest request = new ParticipationRequest();
+//        request.setRequesterId(userId);
+//        request.setEventId(eventId);
+//        request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
+//        request.setStatus(status);
+//
+//        ParticipationRequest saved = requestRepository.save(request);
+//
+//        log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
+//        return ParticipationRequestMapper.toDto(saved);
+//    }
+
     @Override
     @Transactional
     public ParticipationRequestDto createRequest(Long userId, Long eventId) {
         log.info("Пользователь {} пытается создать запрос участия для события {}", userId, eventId);
 
-        // Проверяем существование пользователя - как в монолите
+        // Проверяем существование пользователя
         if (!userExists(userId)) {
             throw new NotFoundException("User", userId);
         }
@@ -62,8 +98,8 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         RequestStatus status = determineRequestStatus(event);
 
         ParticipationRequest request = new ParticipationRequest();
-        request.setRequesterId(userId);
-        request.setEventId(eventId);
+        request.setRequesterId(userId);      // ← В микросервисе: только ID
+        request.setEventId(eventId);         // ← В микросервисе: только ID
         request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
         request.setStatus(status);
 
@@ -72,6 +108,18 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
         return ParticipationRequestMapper.toDto(saved);
     }
+
+//    @Override
+//    public List<ParticipationRequestDto> getUserRequests(Long userId) {
+//        // Проверяем существование пользователя - как в монолите
+//        if (!userExists(userId)) {
+//            throw new NotFoundException("User", userId);
+//        }
+//
+//        return requestRepository.findAllByRequesterId(userId).stream()
+//                .map(ParticipationRequestMapper::toDto)
+//                .toList();
+//    }
 
     @Override
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
@@ -150,6 +198,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     }
 
     // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (аналогичные монолиту) ============
+
+//    private boolean userExists(Long userId) {
+//        Boolean exists = userClient.userExists(userId);
+//        return exists != null && exists;
+//    }
 
     private boolean userExists(Long userId) {
         Boolean exists = userClient.userExists(userId);
