@@ -225,9 +225,20 @@ public class EventServiceImpl implements EventService {
         return enrichShortEventsWithExternalData(events);
     }
 
+//    @Override
+//    public EventDtoOut getEventById(Long eventId) {
+//        Event event = getEvent(eventId);
+//        return enrichEventWithExternalData(event);
+//    }
+
     @Override
     public EventDtoOut getEventById(Long eventId) {
-        Event event = getEvent(eventId);
+        log.info("Getting event by ID for internal call: {}", eventId);
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", eventId));
+
+        // ОБОГАТИТЬ ДАННЫМИ как в других методах
         return enrichEventWithExternalData(event);
     }
 
