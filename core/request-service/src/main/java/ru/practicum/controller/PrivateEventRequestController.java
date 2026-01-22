@@ -1,4 +1,3 @@
-// request-service/src/main/java/ru/practicum/controller/PrivateEventRequestController.java
 package ru.practicum.controller;
 
 import jakarta.validation.Valid;
@@ -35,6 +34,12 @@ public class PrivateEventRequestController {
     public List<ParticipationRequestDto> getRequests(@PathVariable @Min(1) Long userId,
                                                      @PathVariable @Min(1) Long eventId) {
         log.info("GET /users/{}/events/{}/requests", userId, eventId);
-        return requestService.getRequestsForEvent(eventId, userId);
+        try {
+            return requestService.getRequestsForEvent(eventId, userId);
+        } catch (Exception e) {
+            log.error("Error in getRequests: userId={}, eventId={}, error={}",
+                    userId, eventId, e.getMessage(), e);
+            throw e;
+        }
     }
 }

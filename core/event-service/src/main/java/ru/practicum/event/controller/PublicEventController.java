@@ -16,7 +16,7 @@ import ru.practicum.event.model.EventFilter;
 
 import ru.practicum.event.service.EventService;
 import ru.practicum.exception.InvalidRequestException;
-import ru.practicum.statsclient.EventStatsClient;  // ← ИЗМЕНИЛ ИМПОРТ
+import ru.practicum.statsclient.EventStatsClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,7 +33,7 @@ import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 public class PublicEventController {
 
     private final EventService eventService;
-    private final EventStatsClient eventStatsClient;  // ← ИЗМЕНИЛ ТИП
+    private final EventStatsClient eventStatsClient;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @GetMapping
@@ -92,14 +92,14 @@ public class PublicEventController {
 
         EndpointHitDTO endpointHitDto = EndpointHitDTO.builder()
                 .app("ewm-main-service")
-                .uri("/events/" + eventId)
+                .uri("/events/" + eventId)  // ← ВАЖНО: точно такой же URI как в getViewsForEvents!
                 .ip(clientIp)
                 .timestamp(timestamp)
                 .build();
 
         log.info("=== SENDING HIT to stats-server: {}", endpointHitDto);
 
-        eventStatsClient.saveHit(endpointHitDto);  // ← ИЗМЕНИЛ ВЫЗОВ
+        eventStatsClient.saveHit(endpointHitDto);  // ← ВАЖНО: сохраняем hit
 
         log.info("=== HIT SENT ===");
 
@@ -120,7 +120,7 @@ public class PublicEventController {
                 .collect(Collectors.toList());
 
         log.debug("Sending batch hits for {} events", hits.size());
-        eventStatsClient.saveHits(hits);  // ← ИЗМЕНИЛ ВЫЗОВ
+        eventStatsClient.saveHits(hits);
     }
 
     private void sendStatsForEventsList(HttpServletRequest request) {
@@ -135,7 +135,7 @@ public class PublicEventController {
                 .build();
 
         log.debug("Sending hit for events list request");
-        eventStatsClient.saveHit(listHit);  // ← ИЗМЕНИЛ ВЫЗОВ
+        eventStatsClient.saveHit(listHit);
     }
 
     private String getClientIp(HttpServletRequest request) {

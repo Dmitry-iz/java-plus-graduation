@@ -1,4 +1,3 @@
-// interaction-api/src/main/java/ru/practicum/client/UserClient.java
 package ru.practicum.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
@@ -21,7 +20,6 @@ public interface UserClient {
     @GetMapping("/exists/{userId}")
     Boolean userExists(@PathVariable Long userId);
 
-    // Добавляем метод для проверки нескольких пользователей
     @GetMapping("/exists/batch")
     List<Boolean> usersExist(@RequestParam List<Long> userIds);
 }

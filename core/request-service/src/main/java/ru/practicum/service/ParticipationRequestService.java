@@ -1,4 +1,3 @@
-// request-service/src/main/java/ru/practicum/service/ParticipationRequestService.java
 package ru.practicum.service;
 
 import ru.practicum.dto.participation.EventRequestStatusUpdateRequest;

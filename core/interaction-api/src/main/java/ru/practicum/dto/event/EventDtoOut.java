@@ -13,6 +13,8 @@ import ru.practicum.dto.user.UserDtoOut;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
+
 @Getter
 @Setter
 @Builder
@@ -29,13 +31,13 @@ public class EventDtoOut {
     private UserDtoOut initiator;
     private LocationDto location;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime eventDate;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime createdOn;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime publishedOn;
 
     private Boolean paid;

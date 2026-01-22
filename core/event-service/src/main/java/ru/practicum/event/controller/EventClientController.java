@@ -9,6 +9,7 @@ import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.event.service.EventService;
 
 import java.util.List;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -20,38 +21,62 @@ public class EventClientController implements EventClient {
     @Override
     @GetMapping("/{eventId}")
     public EventDtoOut getEventById(@PathVariable Long eventId) {
-        return eventService.getEventById(eventId);
+        try {
+            return eventService.getEventById(eventId);
+        } catch (Exception e) {
+            log.error("Error in getEventById: eventId={}, error={}", eventId, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     @GetMapping("/short/{eventId}")
     public EventShortDtoOut getShortEventById(@PathVariable Long eventId) {
-        return eventService.getShortEventById(eventId);
+        try {
+            return eventService.getShortEventById(eventId);
+        } catch (Exception e) {
+            log.error("Error in getShortEventById: eventId={}, error={}", eventId, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     @GetMapping("/exists/{eventId}")
     public Boolean eventExists(@PathVariable Long eventId) {
-        return eventService.eventExists(eventId);
+        try {
+            return eventService.eventExists(eventId);
+        } catch (Exception e) {
+            log.error("Error in eventExists: eventId={}, error={}", eventId, e.getMessage());
+            return false;
+        }
     }
 
     @Override
     @GetMapping("/batch")
     public List<EventShortDtoOut> getEventsByIds(@RequestParam List<Long> eventIds) {
-        return eventService.getEventsByIds(eventIds);
+        try {
+            return eventService.getEventsByIds(eventIds);
+        } catch (Exception e) {
+            log.error("Error in getEventsByIds: eventIds={}, error={}", eventIds, e.getMessage());
+            return List.of();
+        }
     }
 
     @Override
     @GetMapping("/batch/full")
     public List<EventDtoOut> getFullEventsByIds(@RequestParam List<Long> eventIds) {
-        return eventService.getFullEventsByIds(eventIds);
+        try {
+            return eventService.getFullEventsByIds(eventIds);
+        } catch (Exception e) {
+            log.error("Error in getFullEventsByIds: eventIds={}, error={}", eventIds, e.getMessage());
+            return List.of();
+        }
     }
 
     @Override
     @PutMapping("/{eventId}/increment")
     public void incrementConfirmedRequests(@PathVariable Long eventId,
                                            @RequestParam(required = false, defaultValue = "1") int count) {
-        // Реализация увеличения счетчика подтвержденных запросов
         log.info("Increment confirmed requests for event {} by {}", eventId, count);
     }
 }

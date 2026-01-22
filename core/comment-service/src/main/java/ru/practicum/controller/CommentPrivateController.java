@@ -1,4 +1,4 @@
-// comment-service/src/main/java/ru/practicum/controller/CommentPrivateController.java
+
 package ru.practicum.controller;
 
 import jakarta.validation.Valid;

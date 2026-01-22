@@ -82,8 +82,6 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.deleteById(id);
     }
 
-    // ========== Методы для внутреннего использования ==========
-
     @Override
     public CategoryDtoOut getCategoryById(Long categoryId) {
         return get(categoryId);
@@ -91,7 +89,13 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryDtoOut> getCategoriesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        // ТОЧНО КАК В МОНОЛИТЕ: findAllById сохраняет порядок
         List<Category> categories = categoryRepository.findAllById(ids);
+
         return categories.stream()
                 .map(CategoryMapper::toDto)
                 .collect(Collectors.toList());

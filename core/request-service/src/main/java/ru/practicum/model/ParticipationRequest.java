@@ -3,6 +3,7 @@ package ru.practicum.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 import ru.practicum.enums.RequestStatus;
 
 import java.time.LocalDateTime;
@@ -23,7 +24,8 @@ public class ParticipationRequest {
     @Column(name = "event_id", nullable = false)
     private Long eventId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
     private LocalDateTime created;
 
     @Enumerated(EnumType.STRING)

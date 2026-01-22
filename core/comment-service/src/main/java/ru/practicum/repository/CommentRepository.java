@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/repository/CommentRepository.java
 package ru.practicum.repository;
 
 import org.springframework.data.domain.Page;

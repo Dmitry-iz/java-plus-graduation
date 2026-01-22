@@ -1,5 +1,6 @@
 package ru.practicum.service;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,6 @@ import ru.practicum.mapper.ParticipationRequestMapper;
 import ru.practicum.model.ParticipationRequest;
 import ru.practicum.repository.ParticipationRequestRepository;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,93 +36,87 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final EventClient eventClient;
     private final ParticipationRequestRepository requestRepository;
 
-//    @Override
-//    @Transactional
-//    public ParticipationRequestDto createRequest(Long userId, Long eventId) {
-//        log.info("Пользователь {} пытается создать запрос участия для события {}", userId, eventId);
-//
-//        // Проверяем существование пользователя - как в монолите
-//        if (!userExists(userId)) {
-//            throw new NotFoundException("User", userId);
-//        }
-//
-//        // Получаем событие
-//        EventDtoOut event = eventClient.getEventById(eventId);
-//        if (event == null) {
-//            throw new NotFoundException("Event", eventId);
-//        }
-//
-//        // Проверки из монолита:
-//        checkRequestNotExists(userId, eventId);
-//        checkNotEventInitiator(userId, event);
-//        checkEventIsPublished(event);
-//        checkParticipantLimit(event, eventId);
-//
-//        RequestStatus status = determineRequestStatus(event);
-//
-//        ParticipationRequest request = new ParticipationRequest();
-//        request.setRequesterId(userId);
-//        request.setEventId(eventId);
-//        request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
-//        request.setStatus(status);
-//
-//        ParticipationRequest saved = requestRepository.save(request);
-//
-//        log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
-//        return ParticipationRequestMapper.toDto(saved);
-//    }
-
     @Override
     @Transactional
     public ParticipationRequestDto createRequest(Long userId, Long eventId) {
-        log.info("Пользователь {} пытается создать запрос участия для события {}", userId, eventId);
+        log.info("=== START createRequest: userId={}, eventId={} ===", userId, eventId);
 
-        // Проверяем существование пользователя
-        if (!userExists(userId)) {
-            throw new NotFoundException("User", userId);
+        try {
+            if (!userExists(userId)) {
+                throw new NotFoundException("User", userId);
+            }
+
+            EventDtoOut event;
+            try {
+                event = eventClient.getEventById(eventId);
+                if (event == null) {
+                    throw new NotFoundException("Event", eventId);
+                }
+            } catch (FeignException.NotFound e) {
+                throw new NotFoundException("Event", eventId);
+            } catch (FeignException e) {
+                log.error("Feign error getting event: eventId={}, status={}", eventId, e.status());
+                throw new RuntimeException("Event service unavailable: " + e.getMessage());
+            }
+
+            log.debug("Event obtained: id={}, state={}, initiatorId={}, participantLimit={}",
+                    event.getId(), event.getState(), event.getInitiator().getId(), event.getParticipantLimit());
+
+            if (requestRepository.existsByRequesterIdAndEventId(userId, eventId)) {
+                throw new ConditionNotMetException("Заявка на участие уже отправлена.");
+            }
+
+            if (event.getInitiator().getId().equals(userId)) {
+                throw new ConditionNotMetException("Заявка на участие уже отправлена.");
+            }
+
+            if (!"PUBLISHED".equals(event.getState())) {
+                throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
+            }
+
+            long confirmed = requestRepository.countByEventIdAndStatus(eventId, CONFIRMED);
+            log.debug("Confirmed requests: {}, limit: {}", confirmed, event.getParticipantLimit());
+            if (event.getParticipantLimit() > 0 && confirmed >= event.getParticipantLimit()) {
+                throw new ConditionNotMetException("Лимит участников мероприятия достигнут.");
+            }
+
+            RequestStatus status = (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
+                    ? RequestStatus.CONFIRMED
+                    : RequestStatus.PENDING;
+
+            log.debug("Determined request status: {}", status);
+
+            ParticipationRequest request = new ParticipationRequest();
+            request.setRequesterId(userId);
+            request.setEventId(eventId);
+            request.setStatus(status);
+
+            log.debug("Saving request: requesterId={}, eventId={}, status={}",
+                    request.getRequesterId(), request.getEventId(), request.getStatus());
+
+            ParticipationRequest saved = requestRepository.save(request);
+
+            log.info("Request saved: id={}, created={}", saved.getId(), saved.getCreated());
+
+            ParticipationRequestDto dto = ParticipationRequestMapper.toDto(saved);
+
+            log.info("=== END createRequest: created requestId={} with status={} ===",
+                    saved.getId(), saved.getStatus());
+
+            return dto;
+
+        } catch (NotFoundException | ConditionNotMetException e) {
+            log.warn("createRequest failed: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error in createRequest: userId={}, eventId={}, error={}",
+                    userId, eventId, e.getMessage(), e);
+            throw new RuntimeException("Internal server error: " + e.getMessage(), e);
         }
-
-        // Получаем событие
-        EventDtoOut event = eventClient.getEventById(eventId);
-        if (event == null) {
-            throw new NotFoundException("Event", eventId);
-        }
-
-        // Проверки из монолита:
-        checkRequestNotExists(userId, eventId);
-        checkNotEventInitiator(userId, event);
-        checkEventIsPublished(event);
-        checkParticipantLimit(event, eventId);
-
-        RequestStatus status = determineRequestStatus(event);
-
-        ParticipationRequest request = new ParticipationRequest();
-        request.setRequesterId(userId);      // ← В микросервисе: только ID
-        request.setEventId(eventId);         // ← В микросервисе: только ID
-        request.setCreated(LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS));
-        request.setStatus(status);
-
-        ParticipationRequest saved = requestRepository.save(request);
-
-        log.info("Создана заявка от пользователя {} на событие {} со статусом {}", userId, eventId, status);
-        return ParticipationRequestMapper.toDto(saved);
     }
-
-//    @Override
-//    public List<ParticipationRequestDto> getUserRequests(Long userId) {
-//        // Проверяем существование пользователя - как в монолите
-//        if (!userExists(userId)) {
-//            throw new NotFoundException("User", userId);
-//        }
-//
-//        return requestRepository.findAllByRequesterId(userId).stream()
-//                .map(ParticipationRequestMapper::toDto)
-//                .toList();
-//    }
 
     @Override
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
-        // Проверяем существование пользователя - как в монолите
         if (!userExists(userId)) {
             throw new NotFoundException("User", userId);
         }
@@ -137,7 +130,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     @Transactional
     public EventRequestStatusUpdateResult updateRequestStatuses(Long userId, Long eventId,
                                                                 EventRequestStatusUpdateRequest request) {
-        // Проверяем существование пользователя - как в монолите
         if (!userExists(userId)) {
             throw new NotFoundException("User", userId);
         }
@@ -156,19 +148,23 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     public List<ParticipationRequestDto> getRequestsForEvent(Long eventId, Long initiatorId) {
         log.debug("getRequestsForEvent: {} of user: {}", eventId, initiatorId);
 
-        // Проверяем существование пользователя - как в монолите
         if (!userExists(initiatorId)) {
             throw new NotFoundException("User", initiatorId);
         }
 
-        // Получаем событие
-        EventDtoOut event = eventClient.getEventById(eventId);
-        if (event == null) {
+        EventDtoOut event;
+        try {
+            event = eventClient.getEventById(eventId);
+            if (event == null) {
+                throw new NotFoundException("Event", eventId);
+            }
+        } catch (FeignException.NotFound e) {
             throw new NotFoundException("Event", eventId);
+        } catch (FeignException e) {
+            log.error("Feign error getting event: eventId={}, status={}", eventId, e.status());
+            throw new RuntimeException("Event service unavailable: " + e.getMessage());
         }
 
-        // Проверяем, что пользователь - инициатор события
-        // В монолите: if (!event.getInitiator().getId().equals(initiatorId))
         if (!event.getInitiator().getId().equals(initiatorId)) {
             throw new NoAccessException("Только инициатор может просматривать запросы на проведение мероприятия");
         }
@@ -187,7 +183,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         ParticipationRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("ParticipationRequest", requestId));
 
-        // В монолите: if (!request.getRequester().getId().equals(userId))
         if (!request.getRequesterId().equals(userId)) {
             throw new ForbiddenException("Отменить его может только автор заявки.");
         }
@@ -197,16 +192,42 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return ParticipationRequestMapper.toDto(saved);
     }
 
-    // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (аналогичные монолиту) ============
-
-//    private boolean userExists(Long userId) {
-//        Boolean exists = userClient.userExists(userId);
-//        return exists != null && exists;
-//    }
-
     private boolean userExists(Long userId) {
-        Boolean exists = userClient.userExists(userId);
-        return exists != null && exists;
+        try {
+            Boolean exists = userClient.userExists(userId);
+            return exists != null && exists;
+        } catch (FeignException e) {
+            log.error("Error checking user existence via Feign: userId={}, status={}",
+                    userId, e.status());
+            throw new RuntimeException("User service unavailable: " + e.getMessage());
+        }
+    }
+
+    private EventDtoOut getEventWithCheck(Long userId, Long eventId) {
+        EventDtoOut event;
+        try {
+            event = eventClient.getEventById(eventId);
+            if (event == null) {
+                throw new NotFoundException("Event", eventId);
+            }
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("Event", eventId);
+        } catch (FeignException e) {
+            log.error("Feign error getting event: eventId={}, status={}", eventId, e.status());
+            throw new RuntimeException("Event service unavailable: " + e.getMessage());
+        }
+
+        // Проверяем, что пользователь - инициатор события (КАК В МОНОЛИТЕ!)
+        if (!event.getInitiator().getId().equals(userId)) {
+            throw new ForbiddenException("Пользователь не является инициатором события");
+        }
+
+        // Проверяем статус события
+        if (!EventState.PUBLISHED.name().equals(event.getState())) {
+            throw new ConditionNotMetException("Мероприятие должно быть опубликовано");
+        }
+
+        return event;
     }
 
     private void checkRequestNotExists(Long userId, Long eventId) {
@@ -216,14 +237,13 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     }
 
     private void checkNotEventInitiator(Long userId, EventDtoOut event) {
-        // В монолите: if (event.getInitiator().getId().equals(userId))
+        // В микросервисе state приходит как String
         if (event.getInitiator().getId().equals(userId)) {
             throw new ConditionNotMetException("Заявка на участие уже отправлена.");
         }
     }
 
     private void checkEventIsPublished(EventDtoOut event) {
-        // В монолите: if (!event.getState().equals(EventState.PUBLISHED))
         // В микросервисе state приходит как String
         if (!EventState.PUBLISHED.name().equals(event.getState())) {
             throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
@@ -241,25 +261,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
                 ? RequestStatus.CONFIRMED
                 : RequestStatus.PENDING;
-    }
-
-    private EventDtoOut getEventWithCheck(Long userId, Long eventId) {
-        EventDtoOut event = eventClient.getEventById(eventId);
-        if (event == null) {
-            throw new NotFoundException("Event", eventId);
-        }
-
-        // В монолите: if (!event.getInitiator().getId().equals(userId))
-        if (!event.getInitiator().getId().equals(userId)) {
-            throw new ForbiddenException("Пользователь не является инициатором события");
-        }
-
-        // В монолите: if (!EventState.PUBLISHED.equals(event.getState()))
-        if (!EventState.PUBLISHED.name().equals(event.getState())) {
-            throw new ConditionNotMetException("Мероприятие должно быть опубликовано");
-        }
-
-        return event;
     }
 
     private List<ParticipationRequest> getPendingRequestsOrThrow(List<Long> requestIds) {

@@ -25,7 +25,6 @@ public interface RequestClient {
     @PostMapping("/event/{eventId}/confirmed")
     void incrementConfirmedRequests(@PathVariable Long eventId);
 
-    // НОВЫЙ метод для batch получения confirmedRequests
     @GetMapping("/batch/count")
     Map<Long, Integer> getConfirmedRequestsCounts(@RequestParam List<Long> eventIds);
 }

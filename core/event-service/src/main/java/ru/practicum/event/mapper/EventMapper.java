@@ -23,7 +23,6 @@ public class EventMapper {
                 .build();
     }
 
-    // Это БАЗОВЫЙ метод, без внешних данных
     public static EventDtoOut toDto(Event event) {
         return EventDtoOut.builder()
                 .id(event.getId())
@@ -33,7 +32,7 @@ public class EventMapper {
                 .eventDate(event.getEventDate())
                 .description(event.getDescription())
                 .createdOn(event.getCreatedAt())
-                .state(event.getState().name()) // ← String вместо enum
+                .state(event.getState().name())
                 .confirmedRequests(event.getConfirmedRequests())
                 .views(event.getViews())
                 .location(new LocationDto(event.getLocationLat(), event.getLocationLon()))
@@ -42,7 +41,6 @@ public class EventMapper {
                 .build();
     }
 
-    // Это БАЗОВЫЙ метод, без внешних данных
     public static EventShortDtoOut toShortDto(Event event) {
         return EventShortDtoOut.builder()
                 .id(event.getId())

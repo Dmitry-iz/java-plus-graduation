@@ -1,4 +1,3 @@
-// request-service/src/main/java/ru/practicum/controller/ParticipationRequestController.java
 package ru.practicum.controller;
 
 import lombok.RequiredArgsConstructor;

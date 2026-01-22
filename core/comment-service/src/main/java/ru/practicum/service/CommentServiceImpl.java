@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/service/CommentServiceImpl.java
 package ru.practicum.service;
 
 import lombok.RequiredArgsConstructor;
@@ -43,19 +42,16 @@ public class CommentServiceImpl implements CommentService {
     public CommentDto createComment(Long userId, Long eventId, CommentCreateDto commentCreateDto) {
         log.info("Создание комментария пользователем {} к событию {}", userId, eventId);
 
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
         }
 
-        // Получаем полную информацию о событии для проверки состояния
         EventDtoOut event = eventClient.getEventById(eventId);
         if (event == null) {
             throw new NotFoundException("Event", eventId);
         }
 
-        // Проверяем, что событие опубликовано (как в монолите, но через строку)
         if (!"PUBLISHED".equals(event.getState())) {
             throw new ConditionNotMetException("Нельзя оставлять комментарии к неопубликованному событию");
         }
@@ -69,10 +65,8 @@ public class CommentServiceImpl implements CommentService {
 
         Comment saved = commentRepository.save(comment);
 
-        // Получаем данные автора для DTO
         UserDtoOut author = userClient.getUserById(userId);
 
-        // Получаем краткую информацию о событии для DTO
         EventShortDtoOut eventShort = eventClient.getShortEventById(eventId);
 
         log.info("Создан комментарий ID: {} пользователем ID: {} к событию ID: {}",
@@ -104,7 +98,6 @@ public class CommentServiceImpl implements CommentService {
 
         Comment updated = commentRepository.save(comment);
 
-        // Получаем данные для DTO
         EventShortDtoOut event = eventClient.getShortEventById(comment.getEventId());
         UserDtoOut author = userClient.getUserById(userId);
 
@@ -148,7 +141,6 @@ public class CommentServiceImpl implements CommentService {
             throw new NotFoundException("Comment", commentId);
         }
 
-        // Получаем данные для DTO
         EventShortDtoOut event = eventClient.getShortEventById(comment.getEventId());
         UserDtoOut author = userClient.getUserById(comment.getUserId());
 
@@ -159,7 +151,6 @@ public class CommentServiceImpl implements CommentService {
     public List<CommentDto> getEventComments(Long eventId, Pageable pageable) {
         log.info("Получение комментариев события {}", eventId);
 
-        // Проверяем существование события
         Boolean eventExists = eventClient.eventExists(eventId);
         if (eventExists == null || !eventExists) {
             throw new NotFoundException("Event", eventId);
@@ -178,7 +169,6 @@ public class CommentServiceImpl implements CommentService {
     public List<CommentDto> getUserComments(Long userId, Pageable pageable) {
         log.info("Получение комментариев пользователя {}", userId);
 
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
@@ -220,7 +210,6 @@ public class CommentServiceImpl implements CommentService {
             return List.of();
         }
 
-        // Собираем уникальные ID событий и пользователей
         List<Long> eventIds = comments.stream()
                 .map(Comment::getEventId)
                 .distinct()
@@ -231,14 +220,12 @@ public class CommentServiceImpl implements CommentService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // Получаем данные событий и пользователей
         Map<Long, EventShortDtoOut> eventsMap = eventClient.getEventsByIds(eventIds).stream()
                 .collect(Collectors.toMap(EventShortDtoOut::getId, Function.identity()));
 
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, Function.identity()));
 
-        // Собираем DTO
         return comments.stream()
                 .map(comment -> {
                     EventShortDtoOut event = eventsMap.get(comment.getEventId());

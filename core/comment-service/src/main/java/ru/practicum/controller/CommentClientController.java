@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/controller/CommentClientController.java
 package ru.practicum.controller;
 
 import lombok.RequiredArgsConstructor;

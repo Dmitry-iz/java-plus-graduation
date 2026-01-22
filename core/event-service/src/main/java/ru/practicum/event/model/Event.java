@@ -34,10 +34,10 @@ public class Event {
     private String description;
 
     @Column(name = "category_id", nullable = false)
-    private Long categoryId;  // ← ID вместо связи
+    private Long categoryId;
 
     @Column(name = "initiator_id", nullable = false)
-    private Long initiatorId; // ← ID вместо связи
+    private Long initiatorId;
 
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;

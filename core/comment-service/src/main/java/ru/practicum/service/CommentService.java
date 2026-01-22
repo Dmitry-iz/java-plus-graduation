@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/service/CommentService.java
 package ru.practicum.service;
 
 import org.springframework.data.domain.Pageable;
@@ -10,7 +9,6 @@ import java.util.List;
 
 public interface CommentService {
 
-    // Основные методы (из монолита)
     CommentDto createComment(Long userId, Long eventId, CommentCreateDto commentCreateDto);
 
     CommentDto updateComment(Long userId, Long commentId, CommentUpdateDto commentUpdateDto);
@@ -27,7 +25,6 @@ public interface CommentService {
 
     List<CommentDto> getCommentsAdmin(List<Long> events, List<Long> users, Pageable pageable);
 
-    // Методы для внутреннего использования (Feign клиенты)
     Boolean commentExists(Long commentId);
 
     Long getCountPublishedCommentsByEventId(Long eventId);

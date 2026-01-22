@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/mapper/CommentMapper.java
 package ru.practicum.mapper;
 
 import lombok.experimental.UtilityClass;

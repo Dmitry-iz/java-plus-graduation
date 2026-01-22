@@ -1,4 +1,3 @@
-// interaction-api/src/main/java/ru/practicum/client/EventClient.java
 package ru.practicum.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
@@ -15,7 +14,7 @@ import java.util.List;
 public interface EventClient {
 
     @GetMapping("/{eventId}")
-    EventDtoOut getEventById(@PathVariable Long eventId); // ← Возвращает EventDtoOut с состоянием
+    EventDtoOut getEventById(@PathVariable Long eventId);
 
     @GetMapping("/short/{eventId}")
     EventShortDtoOut getShortEventById(@PathVariable Long eventId);

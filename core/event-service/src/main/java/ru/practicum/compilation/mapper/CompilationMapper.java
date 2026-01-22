@@ -18,13 +18,12 @@ public class CompilationMapper {
                 .build();
     }
 
-    // Это БАЗОВЫЙ метод, события будут добавлены позже
     public static CompilationDto toDto(Compilation compilation) {
         return CompilationDto.builder()
                 .id(compilation.getId())
                 .title(compilation.getTitle())
                 .pinned(compilation.getPinned())
-                .events(null) // ← События будут добавлены в сервисе через Feign
+                .events(null)
                 .build();
     }
 }

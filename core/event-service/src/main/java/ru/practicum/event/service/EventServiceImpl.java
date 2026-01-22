@@ -159,6 +159,11 @@ public class EventServiceImpl implements EventService {
     public EventDtoOut findPublished(Long eventId) {
         Event event = eventRepository.findPublishedById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", eventId));
+
+        // УСТАНОВИТЬ VIEWS ПЕРЕД обогащением
+        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
+        event.setViews(viewsMap.getOrDefault(eventId, 0L));
+
         return enrichEventWithExternalData(event);
     }
 
@@ -179,17 +184,30 @@ public class EventServiceImpl implements EventService {
         return enrichEventWithExternalData(event);
     }
 
+
+
     @Override
     public List<EventShortDtoOut> findShortEventsBy(EventFilter filter) {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
+
+        // 1. ОБОГАТИТЬ СНАЧАЛА VIEWS (как в монолите)
+        enrichEventsWithViews(events);
+
+        // 2. Обогатить остальными данными
         return enrichShortEventsWithExternalData(events);
     }
+
 
     @Override
     public List<EventDtoOut> findFullEventsBy(EventAdminFilter filter) {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
+
+        // 1. ОБОГАТИТЬ VIEWS СНАЧАЛА
+        enrichEventsWithViews(events);
+
+        // 2. Обогатить остальными данными
         return enrichEventsWithExternalData(events);
     }
 
@@ -207,8 +225,6 @@ public class EventServiceImpl implements EventService {
         return enrichShortEventsWithExternalData(events);
     }
 
-    // ========== Методы для внутреннего использования ==========
-
     @Override
     public EventDtoOut getEventById(Long eventId) {
         Event event = getEvent(eventId);
@@ -218,13 +234,16 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventShortDtoOut getShortEventById(Long eventId) {
         Event event = getEvent(eventId);
-        EventShortDtoOut dto = EventMapper.toShortDto(event);
 
-        // Обогащаем данными
+        // ОБОГАТИТЬ ПРОСМОТРАМИ как в монолите
+        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
+        event.setViews(viewsMap.getOrDefault(eventId, 0L));
+
+        EventShortDtoOut dto = EventMapper.toShortDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(eventId));
-        dto.setViews(getViewsCount(eventId));
+        dto.setViews(event.getViews()); // ← Уже установлено выше
 
         return dto;
     }
@@ -245,8 +264,6 @@ public class EventServiceImpl implements EventService {
         List<Event> events = eventRepository.findByIdIn(eventIds);
         return enrichEventsWithExternalData(events);
     }
-
-    // ========== Вспомогательные методы ==========
 
     private Event getEvent(Long eventId) {
         return eventRepository.findById(eventId)
@@ -325,13 +342,15 @@ public class EventServiceImpl implements EventService {
     }
 
     private EventDtoOut enrichEventWithExternalData(Event event) {
-        EventDtoOut dto = EventMapper.toDto(event);
+        // ОБОГАТИТЬ ПРОСМОТРАМИ как в монолите
+        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
+        event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
 
-        // Обогащаем внешними данными
+        EventDtoOut dto = EventMapper.toDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(event.getId()));
-        dto.setViews(getViewsCount(event.getId()));
+        dto.setViews(event.getViews()); // ← Уже установлено выше
 
         return dto;
     }
@@ -358,7 +377,7 @@ public class EventServiceImpl implements EventService {
 
         // Получаем данные batch запросами
         Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
-                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));  // ← ИСПРАВИЛ ТИП
+                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
 
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
@@ -366,16 +385,14 @@ public class EventServiceImpl implements EventService {
         // Получаем confirmedRequests для всех событий
         Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
 
-        // Получаем views для всех событий
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(eventIds);
-
+        // ВАЖНО: views уже установлены в событиях через enrichEventsWithViews
         return events.stream()
                 .map(event -> {
                     EventDtoOut dto = EventMapper.toDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+                    dto.setViews(event.getViews()); // ← Берем views из объекта Event
                     return dto;
                 })
                 .toList();
@@ -403,7 +420,7 @@ public class EventServiceImpl implements EventService {
 
         // Получаем данные batch запросами
         Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
-                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));  // ← ИСПРАВИЛ ТИП
+                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
 
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
@@ -411,23 +428,32 @@ public class EventServiceImpl implements EventService {
         // Получаем confirmedRequests для всех событий
         Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
 
-        // Получаем просмотры для всех событий
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(eventIds);
-
+        // ВАЖНО: views уже установлены в событиях через enrichEventsWithViews
         return events.stream()
                 .map(event -> {
                     EventShortDtoOut dto = EventMapper.toShortDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+                    dto.setViews(event.getViews()); // ← Берем views из объекта Event
                     return dto;
                 })
                 .toList();
     }
 
-    // Метод getViewsCount обновляем
-    private Long getViewsCount(Long eventId) {
-        return eventStatsClient.getViewsForEvent(eventId);
+    private void enrichEventsWithViews(List<Event> events) {
+        if (events.isEmpty()) {
+            return;
+        }
+
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, Long> eventViewsMap = eventStatsClient.getViewsForEvents(eventIds);
+
+        events.forEach(event ->
+                event.setViews(eventViewsMap.getOrDefault(event.getId(), 0L))
+        );
     }
 }

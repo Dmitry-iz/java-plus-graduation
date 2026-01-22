@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/controller/CommentAdminController.java
 package ru.practicum.controller;
 
 import jakarta.validation.constraints.Min;

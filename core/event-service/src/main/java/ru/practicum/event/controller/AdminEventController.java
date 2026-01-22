@@ -11,11 +11,11 @@ import ru.practicum.dto.event.EventDtoOut;
 import ru.practicum.dto.event.EventUpdateAdminDto;
 import ru.practicum.enums.EventState;
 import ru.practicum.event.model.EventAdminFilter;
-
 import ru.practicum.event.service.EventService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 
@@ -32,23 +32,43 @@ public class AdminEventController {
     public List<EventDtoOut> getEvents(
             @RequestParam(required = false) List<Long> users,
             @RequestParam(required = false) List<Long> categories,
-            @RequestParam(required = false) List<EventState> states,
+            @RequestParam(required = false) List<String> states,
             @RequestParam(required = false) @DateTimeFormat(pattern = DATE_TIME_FORMAT) LocalDateTime rangeStart,
             @RequestParam(required = false) @DateTimeFormat(pattern = DATE_TIME_FORMAT) LocalDateTime rangeEnd,
             @RequestParam(defaultValue = "0") Integer from,
             @RequestParam(defaultValue = "10") Integer size) {
 
-        log.info("request from Admin: get all events");
+        log.info("request from Admin: get all events. Params: users={}, categories={}, states={}, rangeStart={}, rangeEnd={}",
+                users, categories, states, rangeStart, rangeEnd);
+
+        List<EventState> eventStates = null;
+        if (states != null && !states.isEmpty()) {
+            try {
+                eventStates = states.stream()
+                        .map(String::toUpperCase)
+                        .map(EventState::valueOf)
+                        .collect(Collectors.toList());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid event state provided: {}", states);
+            }
+        }
+
         EventAdminFilter filter = EventAdminFilter.builder()
                 .users(users)
                 .categories(categories)
-                .states(states)
+                .states(eventStates)
                 .rangeStart(rangeStart)
                 .rangeEnd(rangeEnd)
                 .from(from)
                 .size(size)
                 .build();
-        return eventService.findFullEventsBy(filter);
+
+        log.debug("Filter created: {}", filter);
+
+        List<EventDtoOut> result = eventService.findFullEventsBy(filter);
+        log.info("Found {} events", result.size());
+
+        return result;
     }
 
     @PatchMapping("/{eventId}")

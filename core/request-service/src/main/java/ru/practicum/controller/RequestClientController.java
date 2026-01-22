@@ -44,10 +44,7 @@ public class RequestClientController implements RequestClient {
     @Override
     @PostMapping("/event/{eventId}/confirmed")
     public void incrementConfirmedRequests(@PathVariable Long eventId) {
-        // В микросервисной архитектуре этот метод может быть не нужен
-        // или реализован через обновление счетчика в Event Service
         log.info("Increment confirmed requests for event {}", eventId);
-        // Реализация зависит от требований
     }
 
     @GetMapping("/batch/count")

@@ -1,4 +1,3 @@
-// comment-service/src/main/java/ru/practicum/model/Comment.java
 package ru.practicum.model;
 
 import jakarta.persistence.*;

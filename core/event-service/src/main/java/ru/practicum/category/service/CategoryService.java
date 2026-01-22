@@ -11,8 +11,6 @@ public interface CategoryService {
     CategoryDtoOut add(CategoryDto categoryDto);
     CategoryDtoOut update(Long id, CategoryDto categoryDto);
     void delete(Long id);
-
-    // Методы для внутреннего использования
     CategoryDtoOut getCategoryById(Long categoryId);
     List<CategoryDtoOut> getCategoriesByIds(List<Long> ids);
     Boolean categoryExists(Long categoryId);
