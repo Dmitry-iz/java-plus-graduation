@@ -21,6 +21,17 @@ spring:
     format:
       date-time: yyyy-MM-dd HH:mm:ss
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
 logging:
   level:
     ru.practicum: DEBUG
