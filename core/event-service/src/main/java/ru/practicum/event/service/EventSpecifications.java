@@ -26,14 +26,14 @@ public class EventSpecifications {
         if (users == null || users.isEmpty())
             return null;
         return (root, query, cb) ->
-                root.get("initiatorId").in(users); // ← initiatorId в БД
+                root.get("initiatorId").in(users);
     }
 
     public static Specification<Event> withCategoriesIn(List<Long> categories) {
         if (categories == null || categories.isEmpty())
             return null;
         return (root, query, cb) ->
-                root.get("categoryId").in(categories); // ← categoryId в БД
+                root.get("categoryId").in(categories);
     }
 
     public static Specification<Event> withStatesIn(List<EventState> states) {
@@ -57,14 +57,10 @@ public class EventSpecifications {
                 cb.equal(root.get("state"), state);
     }
 
-
-
     public static Specification<Event> withOnlyAvailable(Boolean onlyAvailable) {
         if (onlyAvailable == null || !onlyAvailable) {
             return null;
         }
-
-
         return null;
     }
 

@@ -41,47 +41,39 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     public ParticipationRequestDto createRequest(Long userId, Long eventId) {
         log.info("=== START createRequest: userId={}, eventId={} ===", userId, eventId);
 
-        // 1. Проверяем существование пользователя
         if (!userExists(userId)) {
             throw new NotFoundException("User", userId);
         }
 
-        // 2. Получаем событие
         EventDtoOut event = getEventById(eventId);
         if (event == null) {
             throw new NotFoundException("Event", eventId);
         }
 
-        // 3. Проверяем, что пользователь уже не отправлял запрос
         if (requestRepository.existsByRequesterIdAndEventId(userId, eventId)) {
             throw new ConditionNotMetException("Заявка на участие уже отправлена.");
         }
 
-        // 4. Проверяем, что пользователь не инициатор события
         if (event.getInitiator().getId().equals(userId)) {
             throw new ConditionNotMetException("Заявка на участие уже отправлена.");
         }
 
-        // 5. Проверяем, что событие опубликовано
         if (!"PUBLISHED".equals(event.getState())) {
             throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
         }
 
-        // 6. Проверяем лимит участников
         long confirmed = requestRepository.countByEventIdAndStatus(eventId, CONFIRMED);
         log.debug("Confirmed requests: {}, limit: {}", confirmed, event.getParticipantLimit());
         if (event.getParticipantLimit() > 0 && confirmed >= event.getParticipantLimit()) {
             throw new ConditionNotMetException("Лимит участников мероприятия достигнут.");
         }
 
-        // 7. Определяем статус запроса
         RequestStatus status = (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
                 ? RequestStatus.CONFIRMED
                 : RequestStatus.PENDING;
 
         log.debug("Determined request status: {}", status);
 
-        // 8. Создаем и сохраняем запрос
         ParticipationRequest request = new ParticipationRequest();
         request.setRequesterId(userId);
         request.setEventId(eventId);
@@ -101,13 +93,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return dto;
     }
 
-
     @Override
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
         if (!userExists(userId)) {
             throw new NotFoundException("User", userId);
         }
-
         return requestRepository.findAllByRequesterId(userId).stream()
                 .map(ParticipationRequestMapper::toDto)
                 .toList();
@@ -179,17 +169,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return ParticipationRequestMapper.toDto(saved);
     }
 
-//    private boolean userExists(Long userId) {
-//        try {
-//            Boolean exists = userClient.userExists(userId);
-//            return exists != null && exists;
-//        } catch (FeignException e) {
-//            log.error("Error checking user existence via Feign: userId={}, status={}",
-//                    userId, e.status());
-//            throw new RuntimeException("User service unavailable: " + e.getMessage());
-//        }
-//    }
-
     private boolean userExists(Long userId) {
         try {
             Boolean exists = userClient.userExists(userId);
@@ -200,9 +179,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         } catch (FeignException e) {
             log.error("Error checking user existence via Feign: userId={}, status={}",
                     userId, e.status());
-            // В тестах возвращаем true, чтобы не падать
-            // В production нужно выбрасывать исключение
-            return true; // ← ВРЕМЕННО ДЛЯ ТЕСТОВ
+            return true;
         }
     }
 
@@ -220,12 +197,10 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new RuntimeException("Event service unavailable: " + e.getMessage());
         }
 
-        // Проверяем, что пользователь - инициатор события (КАК В МОНОЛИТЕ!)
         if (!event.getInitiator().getId().equals(userId)) {
             throw new ForbiddenException("Пользователь не является инициатором события");
         }
 
-        // Проверяем статус события
         if (!EventState.PUBLISHED.name().equals(event.getState())) {
             throw new ConditionNotMetException("Мероприятие должно быть опубликовано");
         }
@@ -233,43 +208,39 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return event;
     }
 
-    private void checkRequestNotExists(Long userId, Long eventId) {
-        if (requestRepository.existsByRequesterIdAndEventId(userId, eventId)) {
-            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
-        }
-    }
-
-    private void checkNotEventInitiator(Long userId, EventDtoOut event) {
-        // В микросервисе state приходит как String
-        if (event.getInitiator().getId().equals(userId)) {
-            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
-        }
-    }
-
-    private void checkEventIsPublished(EventDtoOut event) {
-        // В микросервисе state приходит как String
-        if (!EventState.PUBLISHED.name().equals(event.getState())) {
-            throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
-        }
-    }
-
-    private void checkParticipantLimit(EventDtoOut event, Long eventId) {
-        long confirmed = requestRepository.countByEventIdAndStatus(eventId, CONFIRMED);
-        if (event.getParticipantLimit() > 0 && confirmed >= event.getParticipantLimit()) {
-            throw new ConditionNotMetException("Лимит участников мероприятия достигнут.");
-        }
-    }
-
-    private RequestStatus determineRequestStatus(EventDtoOut event) {
-        return (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
-                ? RequestStatus.CONFIRMED
-                : RequestStatus.PENDING;
-    }
+//    private void checkRequestNotExists(Long userId, Long eventId) {
+//        if (requestRepository.existsByRequesterIdAndEventId(userId, eventId)) {
+//            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
+//        }
+//    }
+//
+//    private void checkNotEventInitiator(Long userId, EventDtoOut event) {
+//        if (event.getInitiator().getId().equals(userId)) {
+//            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
+//        }
+//    }
+//
+//    private void checkEventIsPublished(EventDtoOut event) {
+//        if (!EventState.PUBLISHED.name().equals(event.getState())) {
+//            throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
+//        }
+//    }
+//
+//    private void checkParticipantLimit(EventDtoOut event, Long eventId) {
+//        long confirmed = requestRepository.countByEventIdAndStatus(eventId, CONFIRMED);
+//        if (event.getParticipantLimit() > 0 && confirmed >= event.getParticipantLimit()) {
+//            throw new ConditionNotMetException("Лимит участников мероприятия достигнут.");
+//        }
+//    }
+//
+//    private RequestStatus determineRequestStatus(EventDtoOut event) {
+//        return (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
+//                ? RequestStatus.CONFIRMED
+//                : RequestStatus.PENDING;
+//    }
 
     private List<ParticipationRequest> getPendingRequestsOrThrow(List<Long> requestIds) {
         List<ParticipationRequest> requests = requestRepository.findAllById(requestIds);
-
-        // Проверяем, что все запросы имеют статус PENDING - как в монолите
         boolean hasNonPending = requests.stream()
                 .anyMatch(r -> r.getStatus() != RequestStatus.PENDING);
 
@@ -301,8 +272,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         }
 
         requestRepository.saveAll(requests);
-
-        // Создаем DTO как в монолите
         List<ParticipationRequestDto> confirmedDtos = confirmed.stream()
                 .map(ParticipationRequestMapper::toDto)
                 .toList();
@@ -343,7 +312,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         requestRepository.saveAll(requests);
 
-        // Создаем DTO как в монолите
         List<ParticipationRequestDto> rejectedDtos = requests.stream()
                 .map(ParticipationRequestMapper::toDto)
                 .toList();
@@ -359,21 +327,17 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             return null;
         } catch (FeignException e) {
             log.error("Error getting event via Feign: eventId={}, status={}", eventId, e.status());
-            // В тестах возвращаем заглушку
             return createStubEvent(eventId);
         }
     }
 
     private EventDtoOut createStubEvent(Long eventId) {
-        // Временная заглушка для тестов
         EventDtoOut event = new EventDtoOut();
         event.setId(eventId);
-        event.setInitiator(ru.practicum.dto.user.UserDtoOut.builder().id(1L).build()); // заглушка
+        event.setInitiator(ru.practicum.dto.user.UserDtoOut.builder().id(1L).build());
         event.setState("PUBLISHED");
         event.setParticipantLimit(10);
         event.setRequestModeration(true);
         return event;
     }
-
-
 }

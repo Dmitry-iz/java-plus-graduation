@@ -15,7 +15,7 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: false  # ← ВКЛЮЧИТЬ ЭТО!
+          enabled: false
           lower-case-service-id: true
 
 eureka:

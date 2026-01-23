@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/service/UserService.java
 package ru.practicum.service;
 
 import ru.practicum.dto.user.NewUserRequest;

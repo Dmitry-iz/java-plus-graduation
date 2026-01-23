@@ -7,5 +7,6 @@ import ru.practicum.compilation.model.Compilation;
 
 public interface CompilationRepository extends JpaRepository<Compilation, Long> {
     Page<Compilation> findByPinned(Boolean pinned, Pageable pageable);
+
     boolean existsByTitle(String title);
 }

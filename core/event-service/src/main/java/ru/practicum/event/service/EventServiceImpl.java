@@ -32,13 +32,10 @@ import ru.practicum.exception.ConditionNotMetException;
 import ru.practicum.exception.NoAccessException;
 import ru.practicum.exception.NotFoundException;
 
-
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-
 
 @Slf4j
 @Service
@@ -61,13 +58,11 @@ public class EventServiceImpl implements EventService {
     public EventDtoOut add(Long userId, EventCreateDto eventDto) {
         validateEventDate(eventDto.getEventDate(), EventState.PENDING);
 
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
         }
 
-        // Проверяем существование категории
         if (!categoryService.categoryExists(eventDto.getCategoryId())) {
             throw new NotFoundException("Category", eventDto.getCategoryId());
         }
@@ -85,7 +80,6 @@ public class EventServiceImpl implements EventService {
     public EventDtoOut update(Long userId, Long eventId, EventUpdateDto eventDto) {
         Event event = getEvent(eventId);
 
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
@@ -187,7 +181,6 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findPublishedById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", eventId));
 
-        // УСТАНОВИТЬ VIEWS ПЕРЕД обогащением
         Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
         event.setViews(viewsMap.getOrDefault(eventId, 0L));
 
@@ -196,7 +189,6 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventDtoOut find(Long userId, Long eventId) {
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
@@ -207,21 +199,16 @@ public class EventServiceImpl implements EventService {
         if (!event.getInitiatorId().equals(userId)) {
             throw new NoAccessException("Только инициатор может просматривать это событие");
         }
-
         return enrichEventWithExternalData(event);
     }
-
-
 
     @Override
     public List<EventShortDtoOut> findShortEventsBy(EventFilter filter) {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
 
-        // 1. ОБОГАТИТЬ СНАЧАЛА VIEWS (как в монолите)
         enrichEventsWithViews(events);
 
-        // 2. Обогатить остальными данными
         return enrichShortEventsWithExternalData(events);
     }
 
@@ -231,16 +218,13 @@ public class EventServiceImpl implements EventService {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
 
-        // 1. ОБОГАТИТЬ VIEWS СНАЧАЛА
         enrichEventsWithViews(events);
 
-        // 2. Обогатить остальными данными
         return enrichEventsWithExternalData(events);
     }
 
     @Override
     public List<EventShortDtoOut> findByInitiator(Long userId, Integer offset, Integer limit) {
-        // Проверяем существование пользователя
         Boolean userExists = userClient.userExists(userId);
         if (userExists == null || !userExists) {
             throw new NotFoundException("User", userId);
@@ -258,22 +242,10 @@ public class EventServiceImpl implements EventService {
         return enrichEventWithExternalData(event);
     }
 
-//    @Override
-//    public EventDtoOut getEventById(Long eventId) {
-//        log.info("Getting event by ID for internal call: {}", eventId);
-//
-//        Event event = eventRepository.findById(eventId)
-//                .orElseThrow(() -> new NotFoundException("Event", eventId));
-//
-//        // ОБОГАТИТЬ ДАННЫМИ как в других методах
-//        return enrichEventWithExternalData(event);
-//    }
-
     @Override
     public EventShortDtoOut getShortEventById(Long eventId) {
         Event event = getEvent(eventId);
 
-        // ОБОГАТИТЬ ПРОСМОТРАМИ как в монолите
         Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
         event.setViews(viewsMap.getOrDefault(eventId, 0L));
 
@@ -281,7 +253,7 @@ public class EventServiceImpl implements EventService {
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(eventId));
-        dto.setViews(event.getViews()); // ← Уже установлено выше
+        dto.setViews(event.getViews());
 
         return dto;
     }
@@ -324,15 +296,9 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-//    private void updateEventFields(Event event, Object updateDto) {
-//        // Общая логика обновления полей
-//        // Реализация зависит от конкретного DTO
-//    }
-
     private void updateEventFields(Event event, EventUpdateAdminDto eventDto) {
         if (eventDto == null) return;
 
-        // ТОЧНО КАК В МОНОЛИТЕ: Используем Optional.ofNullable
         if (eventDto.getTitle() != null && !eventDto.getTitle().trim().isEmpty()) {
             event.setTitle(eventDto.getTitle().trim());
         }
@@ -408,7 +374,6 @@ public class EventServiceImpl implements EventService {
     }
 
     private EventDtoOut enrichEventWithExternalData(Event event) {
-        // ОБОГАТИТЬ ПРОСМОТРАМИ как в монолите
         Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
         event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
 
@@ -416,7 +381,7 @@ public class EventServiceImpl implements EventService {
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(event.getId()));
-        dto.setViews(event.getViews()); // ← Уже установлено выше
+        dto.setViews(event.getViews());
 
         return dto;
     }
@@ -426,7 +391,6 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        // Собираем ID для batch запросов
         List<Long> categoryIds = events.stream()
                 .map(Event::getCategoryId)
                 .distinct()
@@ -441,24 +405,21 @@ public class EventServiceImpl implements EventService {
                 .map(Event::getId)
                 .toList();
 
-        // Получаем данные batch запросами
         Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
                 .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
 
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
 
-        // Получаем confirmedRequests для всех событий
         Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
 
-        // ВАЖНО: views уже установлены в событиях через enrichEventsWithViews
         return events.stream()
                 .map(event -> {
                     EventDtoOut dto = EventMapper.toDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(event.getViews()); // ← Берем views из объекта Event
+                    dto.setViews(event.getViews());
                     return dto;
                 })
                 .toList();
@@ -469,7 +430,6 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        // Собираем ID для batch запросов
         List<Long> categoryIds = events.stream()
                 .map(Event::getCategoryId)
                 .distinct()
@@ -484,24 +444,21 @@ public class EventServiceImpl implements EventService {
                 .map(Event::getId)
                 .toList();
 
-        // Получаем данные batch запросами
         Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
                 .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
 
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
 
-        // Получаем confirmedRequests для всех событий
         Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
 
-        // ВАЖНО: views уже установлены в событиях через enrichEventsWithViews
         return events.stream()
                 .map(event -> {
                     EventShortDtoOut dto = EventMapper.toShortDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(event.getViews()); // ← Берем views из объекта Event
+                    dto.setViews(event.getViews());
                     return dto;
                 })
                 .toList();

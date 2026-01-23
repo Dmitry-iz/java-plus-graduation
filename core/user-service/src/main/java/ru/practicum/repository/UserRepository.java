@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/repository/UserRepository.java
 package ru.practicum.repository;
 
 import org.springframework.data.domain.Pageable;

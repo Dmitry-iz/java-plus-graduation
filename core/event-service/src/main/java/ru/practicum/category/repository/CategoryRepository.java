@@ -7,10 +7,8 @@ import ru.practicum.category.model.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     Page<Category> findAllByOrderById(Pageable pageable);
-    boolean existsByName(String name);
-    Category findByName(String name);
-    //List<Category> findAll();
 
-//    @Query("SELECT c FROM Category c ORDER BY c.id")
-//    List<Category> findCategoriesWithLimit(@Param("limit") int limit, Pageable pageable);
+    boolean existsByName(String name);
+
+    Category findByName(String name);
 }

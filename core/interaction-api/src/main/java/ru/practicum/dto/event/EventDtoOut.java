@@ -1,4 +1,3 @@
-// interaction-api/src/main/java/ru/practicum/dto/event/EventDtoOut.java
 package ru.practicum.dto.event;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -43,7 +42,7 @@ public class EventDtoOut {
     private Boolean paid;
     private Integer participantLimit;
     private Boolean requestModeration;
-    private String state; // ← Это поле есть!
+    private String state;
     private Integer confirmedRequests;
     private Long views;
 }

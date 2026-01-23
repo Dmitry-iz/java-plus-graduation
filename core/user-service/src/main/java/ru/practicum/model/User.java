@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/model/User.java
 package ru.practicum.model;
 
 import jakarta.persistence.Column;

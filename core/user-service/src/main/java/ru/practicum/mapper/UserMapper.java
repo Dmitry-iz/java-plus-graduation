@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/mapper/UserMapper.java
 package ru.practicum.mapper;
 
 import ru.practicum.dto.user.NewUserRequest;

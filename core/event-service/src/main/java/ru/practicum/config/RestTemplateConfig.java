@@ -18,7 +18,7 @@ public class RestTemplateConfig {
     }
 
     @Bean
-    @Qualifier("simpleRestTemplate")  // ← ВАЖНО: как в монолите!
+    @Qualifier("simpleRestTemplate")
     public RestTemplate simpleRestTemplate() {
         return new RestTemplate();
     }

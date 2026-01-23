@@ -10,7 +10,7 @@ import ru.practicum.dto.participation.ParticipationRequestDto;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "request-service",contextId = "requestClient", path = "/internal/requests")
+@FeignClient(name = "request-service", contextId = "requestClient", path = "/internal/requests")
 public interface RequestClient {
 
     @GetMapping("/event/{eventId}/count")

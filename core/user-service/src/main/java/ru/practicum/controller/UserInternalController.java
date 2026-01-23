@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/controller/UserInternalController.java
 package ru.practicum.controller;
 
 import lombok.RequiredArgsConstructor;

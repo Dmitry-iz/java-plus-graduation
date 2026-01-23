@@ -5,7 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -16,7 +21,11 @@ import ru.practicum.dto.ViewStatsDTO;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -26,7 +35,7 @@ public class EventStatsClient {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @Qualifier("simpleRestTemplate") // ← ДОБАВЬТЕ ЭТУ АННОТАЦИЮ
+    @Qualifier("simpleRestTemplate")
     private final RestTemplate restTemplate;
 
     @Value("${stats.client.connect-timeout:1000}")
@@ -37,7 +46,6 @@ public class EventStatsClient {
 
     @PostConstruct
     public void init() {
-        // Настройка таймаутов для RestTemplate
         if (restTemplate.getRequestFactory() instanceof HttpComponentsClientHttpRequestFactory) {
             HttpComponentsClientHttpRequestFactory requestFactory =
                     (HttpComponentsClientHttpRequestFactory) restTemplate.getRequestFactory();
@@ -49,7 +57,6 @@ public class EventStatsClient {
 
     public void saveHit(EndpointHitDTO endpointHitDTO) {
         try {
-            // Используем имя сервиса из Eureka (в ВЕРХНЕМ регистре, как зарегистрировано)
             String url = "http://STATS-SERVER/hit";
 
             HttpHeaders headers = new HttpHeaders();
@@ -74,7 +81,6 @@ public class EventStatsClient {
         }
 
         try {
-            // Используем имя сервиса из Eureka (в ВЕРХНЕМ регистре)
             String url = "http://STATS-SERVER/hit/batch";
 
             HttpHeaders headers = new HttpHeaders();

@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/service/UserServiceImpl.java
 package ru.practicum.service;
 
 import lombok.RequiredArgsConstructor;

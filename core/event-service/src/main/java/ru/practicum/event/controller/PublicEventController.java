@@ -7,13 +7,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.dto.EndpointHitDTO;
 import ru.practicum.dto.event.EventDtoOut;
 import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.enums.EventState;
 import ru.practicum.event.model.EventFilter;
-
 import ru.practicum.event.service.EventService;
 import ru.practicum.exception.InvalidRequestException;
 import ru.practicum.statsclient.EventStatsClient;
@@ -92,14 +95,14 @@ public class PublicEventController {
 
         EndpointHitDTO endpointHitDto = EndpointHitDTO.builder()
                 .app("ewm-main-service")
-                .uri("/events/" + eventId)  // ← ВАЖНО: точно такой же URI как в getViewsForEvents!
+                .uri("/events/" + eventId)
                 .ip(clientIp)
                 .timestamp(timestamp)
                 .build();
 
         log.info("=== SENDING HIT to stats-server: {}", endpointHitDto);
 
-        eventStatsClient.saveHit(endpointHitDto);  // ← ВАЖНО: сохраняем hit
+        eventStatsClient.saveHit(endpointHitDto);
 
         log.info("=== HIT SENT ===");
 

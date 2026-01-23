@@ -1,4 +1,3 @@
-// user-service/src/main/java/ru/practicum/UserServiceApplication.java
 package ru.practicum;
 
 import org.springframework.boot.SpringApplication;
