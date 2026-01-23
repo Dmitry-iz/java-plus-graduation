@@ -1,6 +1,7 @@
 package ru.practicum.category.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +17,7 @@ import ru.practicum.exception.NotFoundException;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -93,7 +94,6 @@ public class CategoryServiceImpl implements CategoryService {
             return List.of();
         }
 
-        // ТОЧНО КАК В МОНОЛИТЕ: findAllById сохраняет порядок
         List<Category> categories = categoryRepository.findAllById(ids);
 
         return categories.stream()
