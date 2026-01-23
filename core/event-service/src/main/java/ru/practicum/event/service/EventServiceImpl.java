@@ -125,6 +125,33 @@ public class EventServiceImpl implements EventService {
         return enrichEventWithExternalData(updated);
     }
 
+    private void updateEventFields(Event event, EventUpdateDto eventDto) {
+        if (eventDto == null) return;
+
+        if (eventDto.getTitle() != null && !eventDto.getTitle().trim().isEmpty()) {
+            event.setTitle(eventDto.getTitle().trim());
+        }
+        if (eventDto.getAnnotation() != null && !eventDto.getAnnotation().trim().isEmpty()) {
+            event.setAnnotation(eventDto.getAnnotation().trim());
+        }
+        if (eventDto.getDescription() != null && !eventDto.getDescription().trim().isEmpty()) {
+            event.setDescription(eventDto.getDescription().trim());
+        }
+        if (eventDto.getPaid() != null) {
+            event.setPaid(eventDto.getPaid());
+        }
+        if (eventDto.getParticipantLimit() != null) {
+            event.setParticipantLimit(eventDto.getParticipantLimit());
+        }
+        if (eventDto.getRequestModeration() != null) {
+            event.setRequestModeration(eventDto.getRequestModeration());
+        }
+        if (eventDto.getLocation() != null) {
+            event.setLocationLat(eventDto.getLocation().getLat());
+            event.setLocationLon(eventDto.getLocation().getLon());
+        }
+    }
+
     @Override
     @Transactional
     public EventDtoOut update(Long eventId, EventUpdateAdminDto eventDto) {
@@ -297,9 +324,37 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    private void updateEventFields(Event event, Object updateDto) {
-        // Общая логика обновления полей
-        // Реализация зависит от конкретного DTO
+//    private void updateEventFields(Event event, Object updateDto) {
+//        // Общая логика обновления полей
+//        // Реализация зависит от конкретного DTO
+//    }
+
+    private void updateEventFields(Event event, EventUpdateAdminDto eventDto) {
+        if (eventDto == null) return;
+
+        // ТОЧНО КАК В МОНОЛИТЕ: Используем Optional.ofNullable
+        if (eventDto.getTitle() != null && !eventDto.getTitle().trim().isEmpty()) {
+            event.setTitle(eventDto.getTitle().trim());
+        }
+        if (eventDto.getAnnotation() != null && !eventDto.getAnnotation().trim().isEmpty()) {
+            event.setAnnotation(eventDto.getAnnotation().trim());
+        }
+        if (eventDto.getDescription() != null && !eventDto.getDescription().trim().isEmpty()) {
+            event.setDescription(eventDto.getDescription().trim());
+        }
+        if (eventDto.getPaid() != null) {
+            event.setPaid(eventDto.getPaid());
+        }
+        if (eventDto.getParticipantLimit() != null) {
+            event.setParticipantLimit(eventDto.getParticipantLimit());
+        }
+        if (eventDto.getRequestModeration() != null) {
+            event.setRequestModeration(eventDto.getRequestModeration());
+        }
+        if (eventDto.getLocation() != null) {
+            event.setLocationLat(eventDto.getLocation().getLat());
+            event.setLocationLon(eventDto.getLocation().getLon());
+        }
     }
 
     private void publishEvent(Event event) {
