@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   stats-db:
     image: postgres:16.1
     container_name: stats-db
     ports:
-      - "5436:5432"  # Изменено с 6543 на 5436
+      - "5436:5432"
     volumes:
       - ./volumes/postgres/stats_data:/var/lib/postgresql/data/
     environment:
@@ -22,7 +20,7 @@ services:
     image: postgres:16.1
     container_name: comment-db
     ports:
-      - "5435:5432"  # Изменено с 6542 на 5435
+      - "5435:5432"
     environment:
       - POSTGRES_DB=comment_db
       - POSTGRES_USER=ewm
@@ -39,7 +37,7 @@ services:
     image: postgres:16.1
     container_name: event-db
     ports:
-      - "5433:5432"  # Изменено с 6541 на 5433
+      - "5433:5432"
     environment:
       - POSTGRES_DB=event_db
       - POSTGRES_USER=ewm
@@ -56,7 +54,7 @@ services:
     image: postgres:16.1
     container_name: request-db
     ports:
-      - "5434:5432"  # Изменено с 6540 на 5434
+      - "5434:5432"
     environment:
       - POSTGRES_DB=request_db
       - POSTGRES_USER=ewm
@@ -73,7 +71,7 @@ services:
     image: postgres:16.1
     container_name: user-db
     ports:
-      - "5432:5432"  # Изменено с 6539 на 5432
+      - "5432:5432"
     environment:
       - POSTGRES_DB=user_db
       - POSTGRES_USER=ewm

@@ -208,37 +208,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         return event;
     }
 
-//    private void checkRequestNotExists(Long userId, Long eventId) {
-//        if (requestRepository.existsByRequesterIdAndEventId(userId, eventId)) {
-//            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
-//        }
-//    }
-//
-//    private void checkNotEventInitiator(Long userId, EventDtoOut event) {
-//        if (event.getInitiator().getId().equals(userId)) {
-//            throw new ConditionNotMetException("Заявка на участие уже отправлена.");
-//        }
-//    }
-//
-//    private void checkEventIsPublished(EventDtoOut event) {
-//        if (!EventState.PUBLISHED.name().equals(event.getState())) {
-//            throw new ConditionNotMetException("Невозможно принять участие в неопубликованном мероприятии.");
-//        }
-//    }
-//
-//    private void checkParticipantLimit(EventDtoOut event, Long eventId) {
-//        long confirmed = requestRepository.countByEventIdAndStatus(eventId, CONFIRMED);
-//        if (event.getParticipantLimit() > 0 && confirmed >= event.getParticipantLimit()) {
-//            throw new ConditionNotMetException("Лимит участников мероприятия достигнут.");
-//        }
-//    }
-//
-//    private RequestStatus determineRequestStatus(EventDtoOut event) {
-//        return (!Boolean.TRUE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0)
-//                ? RequestStatus.CONFIRMED
-//                : RequestStatus.PENDING;
-//    }
-
     private List<ParticipationRequest> getPendingRequestsOrThrow(List<Long> requestIds) {
         List<ParticipationRequest> requests = requestRepository.findAllById(requestIds);
         boolean hasNonPending = requests.stream()

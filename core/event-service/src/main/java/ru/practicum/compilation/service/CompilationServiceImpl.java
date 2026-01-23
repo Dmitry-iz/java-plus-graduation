@@ -1,6 +1,7 @@
 package ru.practicum.compilation.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import ru.practicum.exception.NotFoundException;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -95,9 +97,15 @@ public class CompilationServiceImpl implements CompilationService {
         CompilationDto dto = CompilationMapper.toDto(compilation);
 
         if (compilation.getEventIds() != null && !compilation.getEventIds().isEmpty()) {
-            List<EventShortDtoOut> events = eventClient.getEventsByIds(
-                    new ArrayList<>(compilation.getEventIds()));
-            dto.setEvents(events);
+            try {
+                List<EventShortDtoOut> events = eventClient.getEventsByIds(
+                        new ArrayList<>(compilation.getEventIds()));
+                dto.setEvents(events);
+            } catch (Exception e) {
+                log.warn("Event service unavailable for compilation {}, returning empty list: {}",
+                        compilation.getId(), e.getMessage());
+                dto.setEvents(List.of()); // пустой список при недоступности
+            }
         } else {
             dto.setEvents(List.of());
         }

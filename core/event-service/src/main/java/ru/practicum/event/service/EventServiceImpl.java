@@ -373,58 +373,6 @@ public class EventServiceImpl implements EventService {
         return spec;
     }
 
-    private EventDtoOut enrichEventWithExternalData(Event event) {
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
-        event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
-
-        EventDtoOut dto = EventMapper.toDto(event);
-        dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
-        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
-        dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(event.getId()));
-        dto.setViews(event.getViews());
-
-        return dto;
-    }
-
-    private List<EventDtoOut> enrichEventsWithExternalData(List<Event> events) {
-        if (events.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> categoryIds = events.stream()
-                .map(Event::getCategoryId)
-                .distinct()
-                .toList();
-
-        List<Long> userIds = events.stream()
-                .map(Event::getInitiatorId)
-                .distinct()
-                .toList();
-
-        List<Long> eventIds = events.stream()
-                .map(Event::getId)
-                .toList();
-
-        Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
-                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
-
-        Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
-                .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
-
-        Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
-
-        return events.stream()
-                .map(event -> {
-                    EventDtoOut dto = EventMapper.toDto(event);
-                    dto.setCategory(categoriesMap.get(event.getCategoryId()));
-                    dto.setInitiator(usersMap.get(event.getInitiatorId()));
-                    dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(event.getViews());
-                    return dto;
-                })
-                .toList();
-    }
-
     private List<EventShortDtoOut> enrichShortEventsWithExternalData(List<Event> events) {
         if (events.isEmpty()) {
             return List.of();
@@ -478,5 +426,87 @@ public class EventServiceImpl implements EventService {
         events.forEach(event ->
                 event.setViews(eventViewsMap.getOrDefault(event.getId(), 0L))
         );
+    }
+
+    private EventDtoOut enrichEventWithExternalData(Event event) {
+        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
+        event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+
+        EventDtoOut dto = EventMapper.toDto(event);
+        dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
+        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
+        dto.setConfirmedRequests(getSafeConfirmedRequestsCount(event.getId()));
+        dto.setViews(event.getViews());
+
+        return dto;
+    }
+
+    private List<EventDtoOut> enrichEventsWithExternalData(List<Event> events) {
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> categoryIds = events.stream()
+                .map(Event::getCategoryId)
+                .distinct()
+                .toList();
+
+        List<Long> userIds = events.stream()
+                .map(Event::getInitiatorId)
+                .distinct()
+                .toList();
+
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .toList();
+
+        Map<Long, CategoryDtoOut> categoriesMap = categoryService.getCategoriesByIds(categoryIds).stream()
+                .collect(Collectors.toMap(CategoryDtoOut::getId, c -> c));
+
+        Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
+                .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
+
+        Map<Long, Integer> confirmedRequestsMap = getSafeConfirmedRequestsCounts(eventIds);
+
+        return events.stream()
+                .map(event -> {
+                    EventDtoOut dto = EventMapper.toDto(event);
+                    dto.setCategory(categoriesMap.get(event.getCategoryId()));
+                    dto.setInitiator(usersMap.get(event.getInitiatorId()));
+                    dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
+                    dto.setViews(event.getViews());
+                    return dto;
+                })
+                .toList();
+    }
+
+    // Безопасные методы для возврата default значений
+    private Integer getSafeConfirmedRequestsCount(Long eventId) {
+        try {
+            return requestClient.getConfirmedRequestsCount(eventId);
+        } catch (Exception e) {
+            log.warn("Request service unavailable for event {}, returning 0: {}", eventId, e.getMessage());
+            return 0; //  возвращаем 0 при недоступности
+        }
+    }
+
+    private Map<Long, Integer> getSafeConfirmedRequestsCounts(List<Long> eventIds) {
+        try {
+            return requestClient.getConfirmedRequestsCounts(eventIds);
+        } catch (Exception e) {
+            log.warn("Request service unavailable, returning 0 for all events: {}", e.getMessage());
+            // возвращаем 0 для всех событий
+            return eventIds.stream().collect(java.util.stream.Collectors.toMap(id -> id, id -> 0));
+        }
+    }
+
+    private Long getSafeCommentsCount(Long eventId) {
+        try {
+            Long count = commentClient.getCountPublishedCommentsByEventId(eventId);
+            return count != null ? count : 0L;
+        } catch (Exception e) {
+            log.warn("Comment service unavailable for event {}, returning 0: {}", eventId, e.getMessage());
+            return 0L; // возвращаем 0 комментариев
+        }
     }
 }

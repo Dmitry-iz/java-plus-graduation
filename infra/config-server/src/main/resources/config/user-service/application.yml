@@ -21,6 +21,25 @@ spring:
     format:
       date-time: yyyy-MM-dd HH:mm:ss
 
+feign:
+  circuitbreaker:
+    enabled: true
+
+resilience4j:
+  retry:
+    instances:
+      user-service:
+        max-attempts: 3
+        wait-duration: 1000ms
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+
 logging:
   level:
     ru.practicum: DEBUG

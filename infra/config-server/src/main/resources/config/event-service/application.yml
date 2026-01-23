@@ -26,17 +26,19 @@ feign:
     enabled: true
 
 resilience4j:
-  circuitbreaker:
+  retry:
     instances:
       event-service:
-        register-health-indicator: true
+        max-attempts: 3
+        wait-duration: 1000ms
+  circuitbreaker:
+    configs:
+      default:
         sliding-window-size: 10
         minimum-number-of-calls: 5
         permitted-calls-in-half-open-state: 3
-        automatic-transition-from-open-to-half-open-enabled: true
         wait-duration-in-open-state: 5s
         failure-rate-threshold: 50
-        event-consumer-buffer-size: 10
 
 logging:
   level:
