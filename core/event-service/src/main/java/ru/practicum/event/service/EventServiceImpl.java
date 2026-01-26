@@ -33,7 +33,10 @@ import ru.practicum.exception.NoAccessException;
 import ru.practicum.exception.NotFoundException;
 
 import java.time.LocalDateTime;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -52,6 +55,7 @@ public class EventServiceImpl implements EventService {
     private final RequestClient requestClient;
     private final CommentClient commentClient;
     private final EventStatsClient eventStatsClient;
+    private final EventMapper eventMapper;
 
     @Override
     @Transactional
@@ -67,7 +71,7 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Category", eventDto.getCategoryId());
         }
 
-        Event event = EventMapper.fromDto(eventDto);
+        Event event = eventMapper.fromDto(eventDto);
         event.setInitiatorId(userId);
         event.setCategoryId(eventDto.getCategoryId());
 
@@ -212,7 +216,6 @@ public class EventServiceImpl implements EventService {
         return enrichShortEventsWithExternalData(events);
     }
 
-
     @Override
     public List<EventDtoOut> findFullEventsBy(EventAdminFilter filter) {
         Specification<Event> spec = buildSpecification(filter);
@@ -249,7 +252,7 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
         event.setViews(viewsMap.getOrDefault(eventId, 0L));
 
-        EventShortDtoOut dto = EventMapper.toShortDto(event);
+        EventShortDtoOut dto = eventMapper.toShortDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(eventId));
@@ -402,7 +405,7 @@ public class EventServiceImpl implements EventService {
 
         return events.stream()
                 .map(event -> {
-                    EventShortDtoOut dto = EventMapper.toShortDto(event);
+                    EventShortDtoOut dto = eventMapper.toShortDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
@@ -432,7 +435,7 @@ public class EventServiceImpl implements EventService {
         Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
         event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
 
-        EventDtoOut dto = EventMapper.toDto(event);
+        EventDtoOut dto = eventMapper.toDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(getSafeConfirmedRequestsCount(event.getId()));
@@ -470,7 +473,7 @@ public class EventServiceImpl implements EventService {
 
         return events.stream()
                 .map(event -> {
-                    EventDtoOut dto = EventMapper.toDto(event);
+                    EventDtoOut dto = eventMapper.toDto(event);
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
