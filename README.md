@@ -80,5 +80,3 @@ https://raw.githubusercontent.com/yandex-praktikum/java-explore-with-me/main/ewm
 - **Spring Cloud** — Gateway, Config Server, Eureka, OpenFeign
 - **PostgreSQL** — отдельная база данных для каждого сервиса
 - **Docker Compose** — контейнеризация баз данных
-
-Все сервисы автоматически регистрируются в Eureka и загружают конфигурации из Config Server.
