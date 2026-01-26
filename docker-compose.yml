@@ -1,3 +1,10 @@
+version: '3.8'
+
+networks:
+  ewm-network:
+    driver: bridge
+    name: ewm-network
+
 services:
   stats-db:
     image: postgres:16.1
@@ -15,6 +22,8 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - ewm-network
 
   comment-db:
     image: postgres:16.1
@@ -32,6 +41,8 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - ewm-network
 
   event-db:
     image: postgres:16.1
@@ -49,6 +60,8 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - ewm-network
 
   request-db:
     image: postgres:16.1
@@ -66,6 +79,8 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - ewm-network
 
   user-db:
     image: postgres:16.1
@@ -83,3 +98,5 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+    networks:
+      - ewm-network
