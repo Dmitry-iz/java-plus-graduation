@@ -12,6 +12,11 @@ spring:
         enabled: true
         service-id: config-server
       fail-fast: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
 
 eureka:
   client:

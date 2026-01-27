@@ -1,30 +1,102 @@
 version: '3.8'
 
-services:
-  ewm-db:
-    image: postgres:16.1
-    container_name: ewm-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_PASSWORD=ewm
-      - POSTGRES_USER=ewm
-      - POSTGRES_DB=ewm
-    volumes:
-      - postgres_ewm_data:/var/lib/postgresql/data
+networks:
+  ewm-network:
+    driver: bridge
+    name: ewm-network
 
+services:
   stats-db:
     image: postgres:16.1
-    container_name: stats-postgres
+    container_name: stats-db
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./volumes/postgres/stats_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=stats
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - ewm-network
+
+  comment-db:
+    image: postgres:16.1
+    container_name: comment-db
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=comment_db
+      - POSTGRES_USER=ewm
+      - POSTGRES_PASSWORD=ewm
+    volumes:
+      - ./volumes/postgres/comment_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - ewm-network
+
+  event-db:
+    image: postgres:16.1
+    container_name: event-db
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_PASSWORD=test
-      - POSTGRES_USER=test
-      - POSTGRES_DB=stats
+      - POSTGRES_DB=event_db
+      - POSTGRES_USER=ewm
+      - POSTGRES_PASSWORD=ewm
     volumes:
-      - postgres_stats_data:/var/lib/postgresql/data
+      - ./volumes/postgres/event_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - ewm-network
 
-volumes:
-  postgres_ewm_data:
-  postgres_stats_data:
+  request-db:
+    image: postgres:16.1
+    container_name: request-db
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_DB=request_db
+      - POSTGRES_USER=ewm
+      - POSTGRES_PASSWORD=ewm
+    volumes:
+      - ./volumes/postgres/request_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - ewm-network
+
+  user-db:
+    image: postgres:16.1
+    container_name: user-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=user_db
+      - POSTGRES_USER=ewm
+      - POSTGRES_PASSWORD=ewm
+    volumes:
+      - ./volumes/postgres/user_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    networks:
+      - ewm-network
