@@ -4,6 +4,7 @@ spring:
     consumer:
       group-id: action-group
       auto-offset-reset: earliest
+      enable-auto-commit: false
 
 kafka:
   action-topic: stats.user-actions.v1
@@ -14,15 +15,6 @@ user-action:
   register: 0.8
   like: 1.0
 
-logbook:
-  format:
-    style: http
-
 logging:
   level:
-    org.springframework.web: INFO
-    org.springframework.orm.jpa: INFO
-    org.springframework.transaction: INFO
-    org.springframework.transaction.interceptor: INFO
-    org.springframework.orm.jpa.JpaTransactionManager: INFO
-    org.zalando.logbook: TRACE
+    ru.practicum: DEBUG

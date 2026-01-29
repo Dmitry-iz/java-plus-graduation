@@ -28,14 +28,12 @@ public class UserActionConsumer {
         try {
             String actionType = userAction.getActionType().toString();
 
-            // Обрабатываем действие
             similarityCalculator.processUserAction(
                     userAction.getUserId(),
                     userAction.getEventId(),
                     actionType
             );
 
-            // Рассчитываем и отправляем обновленные сходства
             sendUpdatedSimilarities(userAction.getEventId());
 
         } catch (Exception e) {
@@ -70,7 +68,7 @@ public class UserActionConsumer {
                 .setEventA(first)
                 .setEventB(second)
                 .setScore(score)
-                .setTimestamp(Instant.now())  // Используем Instant
+                .setTimestamp(Instant.now())
                 .build();
     }
 

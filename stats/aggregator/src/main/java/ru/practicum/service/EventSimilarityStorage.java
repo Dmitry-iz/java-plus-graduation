@@ -9,16 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class EventSimilarityStorage {
 
-    // Map<EventId, Map<UserId, MaxWeight>> - веса действий пользователей с мероприятиями
     private final Map<Long, Map<Long, Double>> eventUserWeights = new ConcurrentHashMap<>();
 
-    // Map<EventId, TotalWeight> - общие суммы весов каждого мероприятия
     private final Map<Long, Double> eventTotalWeights = new ConcurrentHashMap<>();
 
-    // Map<FirstEventId, Map<SecondEventId, MinWeightSum>> - суммы минимальных весов для пар
     private final Map<Long, Map<Long, Double>> minWeightsSum = new ConcurrentHashMap<>();
 
-    // Веса действий по ТЗ
     private static final double VIEW_WEIGHT = 1.0;
     private static final double REGISTER_WEIGHT = 2.0;
     private static final double LIKE_WEIGHT = 3.0;
@@ -32,7 +28,6 @@ public class EventSimilarityStorage {
         };
     }
 
-    // Получить текущий вес пользователя для мероприятия
     public double getUserEventWeight(Long userId, Long eventId) {
         Map<Long, Double> userWeights = eventUserWeights.get(eventId);
         if (userWeights == null) {
@@ -41,7 +36,6 @@ public class EventSimilarityStorage {
         return userWeights.getOrDefault(userId, 0.0);
     }
 
-    // Обновить вес пользователя для мероприятия (берем максимальный)
     public void updateUserEventWeight(Long userId, Long eventId, double newWeight) {
         Map<Long, Double> userWeights = eventUserWeights.computeIfAbsent(
                 eventId, k -> new ConcurrentHashMap<>());
@@ -53,7 +47,6 @@ public class EventSimilarityStorage {
         }
     }
 
-    // Пересчитать общий вес для мероприятия
     private void recalculateEventTotalWeight(Long eventId) {
         Map<Long, Double> userWeights = eventUserWeights.get(eventId);
         if (userWeights == null) {
@@ -67,12 +60,10 @@ public class EventSimilarityStorage {
         eventTotalWeights.put(eventId, total);
     }
 
-    // Получить общий вес мероприятия
     public double getEventTotalWeight(Long eventId) {
         return eventTotalWeights.getOrDefault(eventId, 0.0);
     }
 
-    // Сохранить сумму минимальных весов для пары мероприятий (с упорядочиванием)
     public void putMinWeightSum(long eventA, long eventB, double sum) {
         long first = Math.min(eventA, eventB);
         long second = Math.max(eventA, eventB);
@@ -82,7 +73,6 @@ public class EventSimilarityStorage {
                 .put(second, sum);
     }
 
-    // Получить сумму минимальных весов для пары мероприятий (с упорядочиванием)
     public double getMinWeightSum(long eventA, long eventB) {
         long first = Math.min(eventA, eventB);
         long second = Math.max(eventA, eventB);
@@ -94,7 +84,6 @@ public class EventSimilarityStorage {
         return secondMap.getOrDefault(second, 0.0);
     }
 
-    // Пересчитать суммы минимальных весов для мероприятия со всеми остальными
     public void recalculateMinWeightsForEvent(Long updatedEventId) {
         Map<Long, Double> updatedUserWeights = eventUserWeights.get(updatedEventId);
         if (updatedUserWeights == null || updatedUserWeights.isEmpty()) {
@@ -114,11 +103,9 @@ public class EventSimilarityStorage {
         }
     }
 
-    // Вычислить сумму минимальных весов для двух наборов пользовательских весов
     private double calculateMinWeightSum(Map<Long, Double> weights1, Map<Long, Double> weights2) {
         double sum = 0.0;
 
-        // Итерируем по пользователям первого мероприятия
         for (Map.Entry<Long, Double> entry : weights1.entrySet()) {
             Long userId = entry.getKey();
             Double weight1 = entry.getValue();
@@ -132,17 +119,14 @@ public class EventSimilarityStorage {
         return sum;
     }
 
-    // Получить все ID мероприятий
     public Set<Long> getAllEventIds() {
         return eventUserWeights.keySet();
     }
 
-    // Получить пользовательские веса для мероприятия
     public Map<Long, Double> getUserWeightsForEvent(Long eventId) {
         return eventUserWeights.getOrDefault(eventId, new ConcurrentHashMap<>());
     }
 
-    // Рассчитать сходство по формуле из ТЗ: similarity(ip,iq) = S_min(ip,iq) / sqrt(S_ip * S_iq)
     public double calculateSimilarity(Long eventId1, Long eventId2) {
         if (eventId1.equals(eventId2)) {
             return 1.0;
