@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -64,5 +65,13 @@ public class PrivateEventController {
                                     @PathVariable @Min(1) Long eventId) {
         log.info("запрос : получить событие: {}", eventId);
         return eventService.find(userId, eventId);
+    }
+
+    @PutMapping("/{userId}/events/{eventId}/like")
+    @ResponseStatus(HttpStatus.OK)
+    public void likeEvent(@PathVariable @Min(1) Long userId,
+                          @PathVariable @Min(1) Long eventId) {
+        log.info("User {} likes event {}", userId, eventId);
+        eventService.likeEvent(userId, eventId);
     }
 }

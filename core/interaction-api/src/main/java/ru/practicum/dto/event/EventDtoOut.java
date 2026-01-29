@@ -44,5 +44,7 @@ public class EventDtoOut {
     private Boolean requestModeration;
     private String state;
     private Integer confirmedRequests;
-    private Long views;
+
+    @Builder.Default
+    private Long views = 0L;
 }

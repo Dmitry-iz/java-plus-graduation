@@ -9,22 +9,19 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import ru.practicum.dto.EndpointHitDTO;
 import ru.practicum.dto.event.EventDtoOut;
 import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.enums.EventState;
 import ru.practicum.event.model.EventFilter;
 import ru.practicum.event.service.EventService;
 import ru.practicum.exception.InvalidRequestException;
-import ru.practicum.statsclient.EventStatsClient;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 
@@ -36,8 +33,6 @@ import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 public class PublicEventController {
 
     private final EventService eventService;
-    private final EventStatsClient eventStatsClient;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @GetMapping
     public List<EventShortDtoOut> getEvents(
@@ -72,86 +67,27 @@ public class PublicEventController {
             }
         }
 
-        List<EventShortDtoOut> events = eventService.findShortEventsBy(filter);
-
-        if (!events.isEmpty()) {
-            sendStatsForEvents(events, request);
-        }
-
-        sendStatsForEventsList(request);
-
-        return events;
+        return eventService.findShortEventsBy(filter);
     }
 
     @GetMapping("/{eventId}")
     public EventDtoOut get(@PathVariable @Min(1) Long eventId,
+                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId,
                            HttpServletRequest request) {
-        log.info("=== PUBLIC EVENT CONTROLLER: Processing event {} ===", eventId);
+        log.info("=== PUBLIC EVENT CONTROLLER: Processing event {} for user {} ===", eventId, userId);
 
-        EventDtoOut dtoOut = eventService.findPublished(eventId);
-
-        String clientIp = getClientIp(request);
-        String timestamp = LocalDateTime.now().format(FORMATTER);
-
-        EndpointHitDTO endpointHitDto = EndpointHitDTO.builder()
-                .app("ewm-main-service")
-                .uri("/events/" + eventId)
-                .ip(clientIp)
-                .timestamp(timestamp)
-                .build();
-
-        log.info("=== SENDING HIT to stats-server: {}", endpointHitDto);
-
-        eventStatsClient.saveHit(endpointHitDto);
-
-        log.info("=== HIT SENT ===");
-
-        return dtoOut;
+        if (userId != null && userId > 0) {
+            return eventService.findPublishedWithUser(eventId, userId);
+        } else {
+            return eventService.findPublished(eventId);
+        }
     }
 
-    private void sendStatsForEvents(List<EventShortDtoOut> events, HttpServletRequest request) {
-        String clientIp = getClientIp(request);
-        String timestamp = LocalDateTime.now().format(FORMATTER);
-
-        List<EndpointHitDTO> hits = events.stream()
-                .map(event -> EndpointHitDTO.builder()
-                        .app("ewm-main-service")
-                        .uri("/events/" + event.getId())
-                        .ip(clientIp)
-                        .timestamp(timestamp)
-                        .build())
-                .collect(Collectors.toList());
-
-        log.debug("Sending batch hits for {} events", hits.size());
-        eventStatsClient.saveHits(hits);
-    }
-
-    private void sendStatsForEventsList(HttpServletRequest request) {
-        String clientIp = getClientIp(request);
-        String timestamp = LocalDateTime.now().format(FORMATTER);
-
-        EndpointHitDTO listHit = EndpointHitDTO.builder()
-                .app("ewm-main-service")
-                .uri("/events")
-                .ip(clientIp)
-                .timestamp(timestamp)
-                .build();
-
-        log.debug("Sending hit for events list request");
-        eventStatsClient.saveHit(listHit);
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
+    @GetMapping("/recommendations")
+    public List<EventShortDtoOut> getRecommendations(
+            @RequestHeader("X-EWM-USER-ID") Long userId,
+            @RequestParam(defaultValue = "10") @Min(1) Integer size) {
+        log.info("Getting recommendations for user: userId={}, size={}", userId, size);
+        return eventService.getRecommendationsForUser(userId, size);
     }
 }

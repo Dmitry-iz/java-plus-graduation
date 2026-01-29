@@ -9,6 +9,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.statsclient.client.CollectorClient;
+import ru.practicum.statsclient.client.AnalyzerClient;
 import ru.practicum.client.UserClient;
 import ru.practicum.client.RequestClient;
 import ru.practicum.client.CommentClient;
@@ -20,8 +22,6 @@ import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.dto.event.EventUpdateAdminDto;
 import ru.practicum.dto.event.EventUpdateDto;
 import ru.practicum.dto.user.UserDtoOut;
-import ru.practicum.statsclient.EventStatsClient;
-
 import ru.practicum.enums.EventState;
 import ru.practicum.event.mapper.EventMapper;
 import ru.practicum.event.model.Event;
@@ -33,7 +33,6 @@ import ru.practicum.exception.NoAccessException;
 import ru.practicum.exception.NotFoundException;
 
 import java.time.LocalDateTime;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,8 +53,9 @@ public class EventServiceImpl implements EventService {
     private final UserClient userClient;
     private final RequestClient requestClient;
     private final CommentClient commentClient;
-    private final EventStatsClient eventStatsClient;
     private final EventMapper eventMapper;
+    private final CollectorClient collectorClient;
+    private final AnalyzerClient analyzerClient;
 
     @Override
     @Transactional
@@ -74,6 +74,7 @@ public class EventServiceImpl implements EventService {
         Event event = eventMapper.fromDto(eventDto);
         event.setInitiatorId(userId);
         event.setCategoryId(eventDto.getCategoryId());
+        event.setRating(0.0);
 
         Event saved = eventRepository.save(event);
         return enrichEventWithExternalData(saved);
@@ -123,33 +124,6 @@ public class EventServiceImpl implements EventService {
         return enrichEventWithExternalData(updated);
     }
 
-    private void updateEventFields(Event event, EventUpdateDto eventDto) {
-        if (eventDto == null) return;
-
-        if (eventDto.getTitle() != null && !eventDto.getTitle().trim().isEmpty()) {
-            event.setTitle(eventDto.getTitle().trim());
-        }
-        if (eventDto.getAnnotation() != null && !eventDto.getAnnotation().trim().isEmpty()) {
-            event.setAnnotation(eventDto.getAnnotation().trim());
-        }
-        if (eventDto.getDescription() != null && !eventDto.getDescription().trim().isEmpty()) {
-            event.setDescription(eventDto.getDescription().trim());
-        }
-        if (eventDto.getPaid() != null) {
-            event.setPaid(eventDto.getPaid());
-        }
-        if (eventDto.getParticipantLimit() != null) {
-            event.setParticipantLimit(eventDto.getParticipantLimit());
-        }
-        if (eventDto.getRequestModeration() != null) {
-            event.setRequestModeration(eventDto.getRequestModeration());
-        }
-        if (eventDto.getLocation() != null) {
-            event.setLocationLat(eventDto.getLocation().getLat());
-            event.setLocationLon(eventDto.getLocation().getLon());
-        }
-    }
-
     @Override
     @Transactional
     public EventDtoOut update(Long eventId, EventUpdateAdminDto eventDto) {
@@ -185,8 +159,23 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findPublishedById(eventId)
                 .orElseThrow(() -> new NotFoundException("Event", eventId));
 
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
-        event.setViews(viewsMap.getOrDefault(eventId, 0L));
+        event.setRating(getEventRating(eventId));
+        return enrichEventWithExternalData(event);
+    }
+
+    @Override
+    public EventDtoOut findPublishedWithUser(Long eventId, Long userId) {
+        Event event = eventRepository.findPublishedById(eventId)
+                .orElseThrow(() -> new NotFoundException("Event", eventId));
+
+        event.setRating(getEventRating(eventId));
+
+        try {
+            collectorClient.sendViewAction(userId, eventId);
+            log.debug("Sent VIEW action for user {} event {}", userId, eventId);
+        } catch (Exception e) {
+            log.error("Failed to send VIEW action to Collector: userId={}, eventId={}", userId, eventId, e);
+        }
 
         return enrichEventWithExternalData(event);
     }
@@ -203,6 +192,8 @@ public class EventServiceImpl implements EventService {
         if (!event.getInitiatorId().equals(userId)) {
             throw new NoAccessException("Только инициатор может просматривать это событие");
         }
+
+        event.setRating(getEventRating(eventId));
         return enrichEventWithExternalData(event);
     }
 
@@ -211,8 +202,7 @@ public class EventServiceImpl implements EventService {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
 
-        enrichEventsWithViews(events);
-
+        enrichEventsWithRatings(events);
         return enrichShortEventsWithExternalData(events);
     }
 
@@ -221,8 +211,7 @@ public class EventServiceImpl implements EventService {
         Specification<Event> spec = buildSpecification(filter);
         List<Event> events = eventRepository.findAll(spec, filter.getPageable()).getContent();
 
-        enrichEventsWithViews(events);
-
+        enrichEventsWithRatings(events);
         return enrichEventsWithExternalData(events);
     }
 
@@ -236,27 +225,28 @@ public class EventServiceImpl implements EventService {
         Pageable pageable = PageRequest.of(offset / limit, limit, Sort.by("id"));
         Page<Event> eventPage = eventRepository.findByInitiatorId(userId, pageable);
         List<Event> events = eventPage.getContent();
+
+        enrichEventsWithRatings(events);
         return enrichShortEventsWithExternalData(events);
     }
 
     @Override
     public EventDtoOut getEventById(Long eventId) {
         Event event = getEvent(eventId);
+        event.setRating(getEventRating(eventId));
         return enrichEventWithExternalData(event);
     }
 
     @Override
     public EventShortDtoOut getShortEventById(Long eventId) {
         Event event = getEvent(eventId);
-
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(eventId));
-        event.setViews(viewsMap.getOrDefault(eventId, 0L));
+        event.setRating(getEventRating(eventId));
 
         EventShortDtoOut dto = eventMapper.toShortDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
-        dto.setConfirmedRequests(requestClient.getConfirmedRequestsCount(eventId));
-        dto.setViews(event.getViews());
+        dto.setConfirmedRequests(getSafeConfirmedRequestsCount(eventId));
+        dto.setViews(event.getRating() != null ? event.getRating().longValue() : 0L);
 
         return dto;
     }
@@ -269,13 +259,52 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<EventShortDtoOut> getEventsByIds(List<Long> eventIds) {
         List<Event> events = eventRepository.findByIdIn(eventIds);
+        enrichEventsWithRatings(events);
         return enrichShortEventsWithExternalData(events);
     }
 
     @Override
     public List<EventDtoOut> getFullEventsByIds(List<Long> eventIds) {
         List<Event> events = eventRepository.findByIdIn(eventIds);
+        enrichEventsWithRatings(events);
         return enrichEventsWithExternalData(events);
+    }
+
+    @Override
+    public List<EventShortDtoOut> getRecommendationsForUser(Long userId, int maxResults) {
+        try {
+            Map<Long, Double> recommendations = analyzerClient.getRecommendationsForUser(userId, maxResults);
+
+            if (recommendations.isEmpty()) {
+                return List.of();
+            }
+
+            List<Event> events = eventRepository.findByIdIn(List.copyOf(recommendations.keySet()));
+
+            events.forEach(event -> event.setRating(recommendations.getOrDefault(event.getId(), 0.0)));
+
+            return enrichShortEventsWithExternalData(events);
+        } catch (Exception e) {
+            log.error("Failed to get recommendations for user {}", userId, e);
+            return List.of();
+        }
+    }
+
+    @Override
+    @Transactional
+    public void likeEvent(Long userId, Long eventId) {
+        Boolean participated = requestClient.userAlreadyParticipates(userId, eventId);
+        if (participated == null || !participated) {
+            throw new ConditionNotMetException("Пользователь может лайкать только посещённые им мероприятия");
+        }
+
+        try {
+            collectorClient.sendLikeAction(userId, eventId);
+            log.info("User {} liked event {}", userId, eventId);
+        } catch (Exception e) {
+            log.error("Failed to send LIKE action for user {} event {}", userId, eventId, e);
+            throw new RuntimeException("Failed to send like action", e);
+        }
     }
 
     private Event getEvent(Long eventId) {
@@ -296,6 +325,33 @@ public class EventServiceImpl implements EventService {
             String message = "Дата события должна быть не ранее, чем через %d часов %s"
                     .formatted(hours, state == EventState.PUBLISHED ? "публикации" : "текущего времени");
             throw new ConditionNotMetException(message);
+        }
+    }
+
+    private void updateEventFields(Event event, EventUpdateDto eventDto) {
+        if (eventDto == null) return;
+
+        if (eventDto.getTitle() != null && !eventDto.getTitle().trim().isEmpty()) {
+            event.setTitle(eventDto.getTitle().trim());
+        }
+        if (eventDto.getAnnotation() != null && !eventDto.getAnnotation().trim().isEmpty()) {
+            event.setAnnotation(eventDto.getAnnotation().trim());
+        }
+        if (eventDto.getDescription() != null && !eventDto.getDescription().trim().isEmpty()) {
+            event.setDescription(eventDto.getDescription().trim());
+        }
+        if (eventDto.getPaid() != null) {
+            event.setPaid(eventDto.getPaid());
+        }
+        if (eventDto.getParticipantLimit() != null) {
+            event.setParticipantLimit(eventDto.getParticipantLimit());
+        }
+        if (eventDto.getRequestModeration() != null) {
+            event.setRequestModeration(eventDto.getRequestModeration());
+        }
+        if (eventDto.getLocation() != null) {
+            event.setLocationLat(eventDto.getLocation().getLat());
+            event.setLocationLon(eventDto.getLocation().getLon());
         }
     }
 
@@ -401,7 +457,7 @@ public class EventServiceImpl implements EventService {
         Map<Long, UserDtoOut> usersMap = userClient.getUsersByIds(userIds).stream()
                 .collect(Collectors.toMap(UserDtoOut::getId, u -> u));
 
-        Map<Long, Integer> confirmedRequestsMap = requestClient.getConfirmedRequestsCounts(eventIds);
+        Map<Long, Integer> confirmedRequestsMap = getSafeConfirmedRequestsCounts(eventIds);
 
         return events.stream()
                 .map(event -> {
@@ -409,13 +465,13 @@ public class EventServiceImpl implements EventService {
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(event.getViews());
+                    dto.setViews(event.getRating() != null ? event.getRating().longValue() : 0L);
                     return dto;
                 })
                 .toList();
     }
 
-    private void enrichEventsWithViews(List<Event> events) {
+    private void enrichEventsWithRatings(List<Event> events) {
         if (events.isEmpty()) {
             return;
         }
@@ -424,22 +480,19 @@ public class EventServiceImpl implements EventService {
                 .map(Event::getId)
                 .collect(Collectors.toList());
 
-        Map<Long, Long> eventViewsMap = eventStatsClient.getViewsForEvents(eventIds);
+        Map<Long, Double> eventRatingsMap = getEventsRatings(eventIds);
 
         events.forEach(event ->
-                event.setViews(eventViewsMap.getOrDefault(event.getId(), 0L))
+                event.setRating(eventRatingsMap.getOrDefault(event.getId(), 0.0))
         );
     }
 
     private EventDtoOut enrichEventWithExternalData(Event event) {
-        Map<Long, Long> viewsMap = eventStatsClient.getViewsForEvents(List.of(event.getId()));
-        event.setViews(viewsMap.getOrDefault(event.getId(), 0L));
-
         EventDtoOut dto = eventMapper.toDto(event);
         dto.setCategory(categoryService.getCategoryById(event.getCategoryId()));
         dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
         dto.setConfirmedRequests(getSafeConfirmedRequestsCount(event.getId()));
-        dto.setViews(event.getViews());
+        dto.setViews(event.getRating() != null ? event.getRating().longValue() : 0L);
 
         return dto;
     }
@@ -477,19 +530,37 @@ public class EventServiceImpl implements EventService {
                     dto.setCategory(categoriesMap.get(event.getCategoryId()));
                     dto.setInitiator(usersMap.get(event.getInitiatorId()));
                     dto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(event.getId(), 0));
-                    dto.setViews(event.getViews());
+                    dto.setViews(event.getRating() != null ? event.getRating().longValue() : 0L);
                     return dto;
                 })
                 .toList();
     }
 
-    // Безопасные методы для возврата default значений
+    private Double getEventRating(Long eventId) {
+        try {
+            Map<Long, Double> interactions = analyzerClient.getInteractionsCount(List.of(eventId));
+            return interactions.getOrDefault(eventId, 0.0);
+        } catch (Exception e) {
+            log.warn("Analyzer service unavailable for event {}, returning 0.0: {}", eventId, e.getMessage());
+            return 0.0;
+        }
+    }
+
+    private Map<Long, Double> getEventsRatings(List<Long> eventIds) {
+        try {
+            return analyzerClient.getInteractionsCount(eventIds);
+        } catch (Exception e) {
+            log.warn("Analyzer service unavailable, returning 0.0 for all events: {}", e.getMessage());
+            return eventIds.stream().collect(Collectors.toMap(id -> id, id -> 0.0));
+        }
+    }
+
     private Integer getSafeConfirmedRequestsCount(Long eventId) {
         try {
             return requestClient.getConfirmedRequestsCount(eventId);
         } catch (Exception e) {
             log.warn("Request service unavailable for event {}, returning 0: {}", eventId, e.getMessage());
-            return 0; //  возвращаем 0 при недоступности
+            return 0;
         }
     }
 
@@ -498,18 +569,7 @@ public class EventServiceImpl implements EventService {
             return requestClient.getConfirmedRequestsCounts(eventIds);
         } catch (Exception e) {
             log.warn("Request service unavailable, returning 0 for all events: {}", e.getMessage());
-            // возвращаем 0 для всех событий
-            return eventIds.stream().collect(java.util.stream.Collectors.toMap(id -> id, id -> 0));
-        }
-    }
-
-    private Long getSafeCommentsCount(Long eventId) {
-        try {
-            Long count = commentClient.getCountPublishedCommentsByEventId(eventId);
-            return count != null ? count : 0L;
-        } catch (Exception e) {
-            log.warn("Comment service unavailable for event {}, returning 0: {}", eventId, e.getMessage());
-            return 0L; // возвращаем 0 комментариев
+            return eventIds.stream().collect(Collectors.toMap(id -> id, id -> 0));
         }
     }
 }
