@@ -174,38 +174,24 @@ public class RecommendationService {
         Map<Long, Double> result = new HashMap<>();
 
         if (eventIds == null || eventIds.isEmpty()) {
-            log.warn("Empty eventIds list provided");
             return result;
         }
 
-        log.debug("Getting interactions count for eventIds: {}", eventIds);
-
         List<Object[]> totalWeights = userInteractionRepository
                 .getTotalWeightsByEventIds(eventIds);
-
-        log.debug("Raw SQL results: {}", totalWeights);
 
         for (Long eventId : eventIds) {
             result.put(eventId, 0.0);
         }
 
-        if (!totalWeights.isEmpty()) {
-            Object firstResult = totalWeights.get(0);
-            if (firstResult != null && firstResult instanceof Object[]) {
-                Object[] row = (Object[]) firstResult;
-                if (row.length > 0) {
-                    Double totalSum = (Double) row[0];
-                    if (totalSum != null) {
-                        log.warn("Query returns single sum for all events: {}", totalSum);
-                        if (!eventIds.isEmpty()) {
-                            result.put(eventIds.get(0), totalSum);
-                        }
-                    }
-                }
+        for (Object[] row : totalWeights) {
+            Long eventId = ((Number) row[0]).longValue();
+            Double totalWeight = (Double) row[1];
+            if (totalWeight != null) {
+                result.put(eventId, totalWeight);
             }
         }
 
-        log.debug("Final interactions count result: {}", result);
         return result;
     }
 }

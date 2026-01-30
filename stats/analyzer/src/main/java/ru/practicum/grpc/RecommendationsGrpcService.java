@@ -82,27 +82,19 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
         log.info("Get interactions count for {} events", request.getEventIdCount());
 
         try {
-            List<Long> eventIds = request.getEventIdList();
-
-            if (eventIds.isEmpty()) {
-                responseObserver.onCompleted();
-                return;
-            }
-
             Map<Long, Double> interactions = recommendationService
-                    .getInteractionsCount(eventIds);
+                    .getInteractionsCount(request.getEventIdList());
 
             for (Map.Entry<Long, Double> entry : interactions.entrySet()) {
-                if (entry.getValue() != null && entry.getValue() > 0) {
-                    RecommendedEventProto response = RecommendedEventProto.newBuilder()
-                            .setEventId(entry.getKey())
-                            .setScore(entry.getValue())
-                            .build();
-                    responseObserver.onNext(response);
-                }
+                RecommendedEventProto response = RecommendedEventProto.newBuilder()
+                        .setEventId(entry.getKey())
+                        .setScore(entry.getValue())
+                        .build();
+                responseObserver.onNext(response);
             }
 
             responseObserver.onCompleted();
+            log.debug("Sent interactions count for {} events", interactions.size());
 
         } catch (Exception e) {
             log.error("Error getting interactions count", e);
