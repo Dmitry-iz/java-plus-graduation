@@ -82,8 +82,19 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
         log.info("Get interactions count for {} events", request.getEventIdCount());
 
         try {
+            List<Long> eventIds = request.getEventIdList();
+            log.debug("Event IDs requested: {}", eventIds);
+
+            if (eventIds.isEmpty()) {
+                log.warn("Empty event IDs list received");
+                responseObserver.onCompleted();
+                return;
+            }
+
             Map<Long, Double> interactions = recommendationService
-                    .getInteractionsCount(request.getEventIdList());
+                    .getInteractionsCount(eventIds);
+
+            log.debug("Found interactions for {} events", interactions.size());
 
             for (Map.Entry<Long, Double> entry : interactions.entrySet()) {
                 RecommendedEventProto response = RecommendedEventProto.newBuilder()
@@ -91,14 +102,20 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
                         .setScore(entry.getValue())
                         .build();
                 responseObserver.onNext(response);
+                log.trace("Sent interaction: eventId={}, score={}", entry.getKey(), entry.getValue());
             }
 
             responseObserver.onCompleted();
-            log.debug("Sent interactions count for {} events", interactions.size());
+            log.info("Successfully sent interactions count for {} events", interactions.size());
 
         } catch (Exception e) {
-            log.error("Error getting interactions count", e);
-            responseObserver.onError(e);
+            log.error("Error getting interactions count for events: {}", request.getEventIdList(), e);
+            responseObserver.onError(
+                    io.grpc.Status.INTERNAL
+                            .withDescription("Failed to get interactions count: " + e.getMessage())
+                            .withCause(e)
+                            .asRuntimeException()
+            );
         }
     }
 }

@@ -174,24 +174,41 @@ public class RecommendationService {
         Map<Long, Double> result = new HashMap<>();
 
         if (eventIds == null || eventIds.isEmpty()) {
+            log.warn("Empty eventIds list provided");
             return result;
         }
 
+        log.debug("Getting interactions count for eventIds: {}", eventIds);
+
         List<Object[]> totalWeights = userInteractionRepository
                 .getTotalWeightsByEventIds(eventIds);
+
+        log.debug("Raw SQL results count: {}", totalWeights.size());
 
         for (Long eventId : eventIds) {
             result.put(eventId, 0.0);
         }
 
         for (Object[] row : totalWeights) {
-            Long eventId = ((Number) row[0]).longValue();
-            Double totalWeight = (Double) row[1];
-            if (totalWeight != null) {
-                result.put(eventId, totalWeight);
+            if (row == null || row.length < 2) {
+                log.warn("Invalid row format: {}", Arrays.toString(row));
+                continue;
+            }
+
+            try {
+                Long eventId = ((Number) row[0]).longValue();
+                Double totalWeight = (Double) row[1];
+
+                if (eventId != null && totalWeight != null) {
+                    result.put(eventId, totalWeight);
+                    log.debug("Event {} has total weight {}", eventId, totalWeight);
+                }
+            } catch (Exception e) {
+                log.error("Error processing row: {}", Arrays.toString(row), e);
             }
         }
 
+        log.debug("Final interactions count result: {}", result);
         return result;
     }
 }
