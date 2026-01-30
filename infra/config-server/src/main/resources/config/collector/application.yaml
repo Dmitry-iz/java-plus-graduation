@@ -1,14 +1,11 @@
+server:
+  port: 0
+
 grpc:
   server:
     port: 0
 
-spring:
-  kafka:
-    bootstrap-servers: localhost:9092
-
 kafka:
-  topic: stats.user-actions.v1
-
-logging:
-  level:
-    ru.practicum: DEBUG
+  settings:
+    url: "localhost:9092"
+    topic: "stats.user-actions.v1"
