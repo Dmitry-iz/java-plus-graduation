@@ -17,6 +17,18 @@ spring:
         service-id: config-server
       fail-fast: false
 
+  #KAFKA:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: analyzer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    properties:
+      spring.json.trusted.packages: "*"
+      spring.json.value.default.type: ru.practicum.ewm.stats.avro.UserActionAvro
+
 eureka:
   client:
     serviceUrl:
@@ -25,3 +37,7 @@ eureka:
     preferIpAddress: true
     instance-id: ${spring.application.name}:${random.int[10000,99999]}
     lease-renewal-interval-in-seconds: 10
+
+grpc:
+  server:
+    port: 0
