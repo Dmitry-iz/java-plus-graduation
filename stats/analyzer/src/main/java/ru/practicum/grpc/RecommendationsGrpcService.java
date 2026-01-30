@@ -83,10 +83,8 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
 
         try {
             List<Long> eventIds = request.getEventIdList();
-            log.debug("Event IDs requested: {}", eventIds);
 
             if (eventIds.isEmpty()) {
-                log.warn("Empty event IDs list received");
                 responseObserver.onCompleted();
                 return;
             }
@@ -94,28 +92,21 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
             Map<Long, Double> interactions = recommendationService
                     .getInteractionsCount(eventIds);
 
-            log.debug("Found interactions for {} events", interactions.size());
-
             for (Map.Entry<Long, Double> entry : interactions.entrySet()) {
-                RecommendedEventProto response = RecommendedEventProto.newBuilder()
-                        .setEventId(entry.getKey())
-                        .setScore(entry.getValue())
-                        .build();
-                responseObserver.onNext(response);
-                log.trace("Sent interaction: eventId={}, score={}", entry.getKey(), entry.getValue());
+                if (entry.getValue() != null && entry.getValue() > 0) {
+                    RecommendedEventProto response = RecommendedEventProto.newBuilder()
+                            .setEventId(entry.getKey())
+                            .setScore(entry.getValue())
+                            .build();
+                    responseObserver.onNext(response);
+                }
             }
 
             responseObserver.onCompleted();
-            log.info("Successfully sent interactions count for {} events", interactions.size());
 
         } catch (Exception e) {
-            log.error("Error getting interactions count for events: {}", request.getEventIdList(), e);
-            responseObserver.onError(
-                    io.grpc.Status.INTERNAL
-                            .withDescription("Failed to get interactions count: " + e.getMessage())
-                            .withCause(e)
-                            .asRuntimeException()
-            );
+            log.error("Error getting interactions count", e);
+            responseObserver.onError(e);
         }
     }
 }

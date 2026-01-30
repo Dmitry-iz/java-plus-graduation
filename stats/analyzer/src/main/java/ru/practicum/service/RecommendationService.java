@@ -183,28 +183,25 @@ public class RecommendationService {
         List<Object[]> totalWeights = userInteractionRepository
                 .getTotalWeightsByEventIds(eventIds);
 
-        log.debug("Raw SQL results count: {}", totalWeights.size());
+        log.debug("Raw SQL results: {}", totalWeights);
 
         for (Long eventId : eventIds) {
             result.put(eventId, 0.0);
         }
 
-        for (Object[] row : totalWeights) {
-            if (row == null || row.length < 2) {
-                log.warn("Invalid row format: {}", Arrays.toString(row));
-                continue;
-            }
-
-            try {
-                Long eventId = ((Number) row[0]).longValue();
-                Double totalWeight = (Double) row[1];
-
-                if (eventId != null && totalWeight != null) {
-                    result.put(eventId, totalWeight);
-                    log.debug("Event {} has total weight {}", eventId, totalWeight);
+        if (!totalWeights.isEmpty()) {
+            Object firstResult = totalWeights.get(0);
+            if (firstResult != null && firstResult instanceof Object[]) {
+                Object[] row = (Object[]) firstResult;
+                if (row.length > 0) {
+                    Double totalSum = (Double) row[0];
+                    if (totalSum != null) {
+                        log.warn("Query returns single sum for all events: {}", totalSum);
+                        if (!eventIds.isEmpty()) {
+                            result.put(eventIds.get(0), totalSum);
+                        }
+                    }
                 }
-            } catch (Exception e) {
-                log.error("Error processing row: {}", Arrays.toString(row), e);
             }
         }
 

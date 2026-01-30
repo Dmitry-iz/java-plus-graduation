@@ -30,8 +30,6 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     @Query("SELECT SUM(ui.actionWeight) FROM UserInteraction ui WHERE ui.eventId = :eventId")
     Double getTotalWeightByEventId(@Param("eventId") Long eventId);
 
-    @Query("SELECT ui.eventId, SUM(ui.actionWeight) FROM UserInteraction ui " +
-            "WHERE ui.eventId IN :eventIds " +
-            "GROUP BY ui.eventId")
+    @Query("SELECT SUM(ui.actionWeight) FROM UserInteraction ui WHERE ui.eventId IN :eventIds")
     List<Object[]> getTotalWeightsByEventIds(@Param("eventIds") List<Long> eventIds);
 }
