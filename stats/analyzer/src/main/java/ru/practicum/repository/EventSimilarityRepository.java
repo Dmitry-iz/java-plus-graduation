@@ -12,10 +12,6 @@ public interface EventSimilarityRepository extends JpaRepository<EventSimilarity
 
     Optional<EventSimilarity> findByEventAAndEventB(Long eventA, Long eventB);
 
-    // ИСПРАВИТЬ: Убрать этот метод или изменить на правильный
-    // findByEventAOrEventB(Long eventId) ← НЕПРАВИЛЬНО
-
-    // ВМЕСТО ЭТОГО добавить правильные методы:
     @Query("SELECT es FROM EventSimilarity es WHERE es.eventA = :eventId OR es.eventB = :eventId")
     List<EventSimilarity> findByEventId(@Param("eventId") Long eventId);
 

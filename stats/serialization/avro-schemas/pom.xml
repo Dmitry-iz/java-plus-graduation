@@ -20,7 +20,6 @@
     </properties>
 
     <dependencies>
-        <!-- Avro БЕЗ confluent -->
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
@@ -30,7 +29,6 @@
 
     <build>
         <plugins>
-            <!-- Avro генерация -->
             <plugin>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro-maven-plugin</artifactId>

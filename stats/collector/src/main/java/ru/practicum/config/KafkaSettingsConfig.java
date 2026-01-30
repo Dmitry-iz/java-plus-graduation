@@ -1,6 +1,5 @@
 package ru.practicum.config;
 
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
