@@ -4,8 +4,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import ru.practicum.dto.EndpointHitDTO;
-import ru.practicum.dto.ViewStatsDTO;
+import ru.practicum.dto.stats.EndpointHitDTO;
+import ru.practicum.dto.stats.ViewStatsDTO;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
