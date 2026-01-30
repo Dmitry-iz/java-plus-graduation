@@ -2,40 +2,32 @@ server:
   port: 0
 
 spring:
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
   application:
     name: analyzer
+
   config:
     import: "configserver:"
+
   cloud:
     config:
       discovery:
         enabled: true
         service-id: config-server
-      fail-fast: false
-
-  #KAFKA:
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: analyzer-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-    properties:
-      spring.json.trusted.packages: "*"
-      spring.json.value.default.type: ru.practicum.ewm.stats.avro.UserActionAvro
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
 
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    service-url:
+      defaultZone: "http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/"
+
   instance:
-    preferIpAddress: true
-    instance-id: ${spring.application.name}:${random.int[10000,99999]}
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+    hostname: localhost
     lease-renewal-interval-in-seconds: 10
 
 grpc:

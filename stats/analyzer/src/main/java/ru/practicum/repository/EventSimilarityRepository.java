@@ -40,21 +40,29 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.practicum.model.EventSimilarity;
+import ru.practicum.model.EventSimilarityId;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface EventSimilarityRepository extends JpaRepository<EventSimilarity, Long> {
+public interface EventSimilarityRepository extends JpaRepository<EventSimilarity, EventSimilarityId> {
 
-    Optional<EventSimilarity> findByEventAAndEventB(Long eventA, Long eventB);
+    // Найти сходство по упорядоченной паре событий
+    default Optional<EventSimilarity> findByOrderedEvents(Long event1, Long event2) {
+        long first = Math.min(event1, event2);
+        long second = Math.max(event1, event2);
+        return findById(new EventSimilarityId(first, second));
+    }
 
-    @Query("SELECT es FROM EventSimilarity es WHERE (es.eventA = :eventId OR es.eventB = :eventId) " +
-            "ORDER BY es.similarityScore DESC")
+    // Найти похожие события для указанного события
+    @Query("SELECT es FROM EventSimilarity es WHERE es.firstEvent = :eventId OR es.secondEvent = :eventId " +
+            "ORDER BY es.score DESC")
     List<EventSimilarity> findSimilarEvents(@Param("eventId") Long eventId, Pageable pageable);
 
-    @Query("SELECT es FROM EventSimilarity es WHERE (es.eventA = :eventId OR es.eventB = :eventId) " +
-            "AND (es.eventA NOT IN :excludedEvents AND es.eventB NOT IN :excludedEvents) " +
-            "ORDER BY es.similarityScore DESC")
+    // Найти похожие события, исключая определенные
+    @Query("SELECT es FROM EventSimilarity es WHERE (es.firstEvent = :eventId OR es.secondEvent = :eventId) " +
+            "AND (es.firstEvent NOT IN :excludedEvents AND es.secondEvent NOT IN :excludedEvents) " +
+            "ORDER BY es.score DESC")
     List<EventSimilarity> findSimilarEventsExcluding(@Param("eventId") Long eventId,
                                                      @Param("excludedEvents") List<Long> excludedEvents,
                                                      Pageable pageable);

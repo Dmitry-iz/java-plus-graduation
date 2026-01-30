@@ -220,23 +220,24 @@ public class RecommendationService {
     private final UserInteractionRepository userInteractionRepository;
     private final EventSimilarityRepository eventSimilarityRepository;
 
-
     @Transactional(readOnly = true)
     public List<EventSimilarity> getSimilarEvents(Long eventId, Long userId, int maxResults) {
-
+        // 1. События пользователя
         Set<Long> userEventIds = userInteractionRepository.findByUserId(userId).stream()
                 .map(UserInteraction::getEventId)
                 .collect(Collectors.toSet());
 
+        // 2. Похожие события
         Pageable pageable = PageRequest.of(0, maxResults * 2);
         List<EventSimilarity> similarities = eventSimilarityRepository
                 .findSimilarEvents(eventId, pageable);
 
+        // 3. Фильтруем
         return similarities.stream()
                 .filter(similarity -> {
-                    Long otherEvent = similarity.getEventA().equals(eventId)
-                            ? similarity.getEventB()
-                            : similarity.getEventA();
+                    Long otherEvent = similarity.getFirstEvent().equals(eventId)
+                            ? similarity.getSecondEvent()
+                            : similarity.getFirstEvent();
                     return !userEventIds.contains(otherEvent);
                 })
                 .limit(maxResults)
@@ -245,6 +246,7 @@ public class RecommendationService {
 
     @Transactional(readOnly = true)
     public Map<Long, Double> getRecommendationsForUser(Long userId, int maxResults) {
+        // 1. Последние 20 событий пользователя
         Pageable recentPage = PageRequest.of(0, 20);
         List<UserInteraction> recentInteractions = userInteractionRepository
                 .findRecentByUserId(userId, recentPage);
@@ -253,10 +255,12 @@ public class RecommendationService {
             return Collections.emptyMap();
         }
 
+        // 2. ID всех событий пользователя
         Set<Long> userEventIds = recentInteractions.stream()
                 .map(UserInteraction::getEventId)
                 .collect(Collectors.toSet());
 
+        // 3. Ищем похожие события
         Map<Long, Double> candidates = new HashMap<>();
 
         for (UserInteraction interaction : recentInteractions) {
@@ -269,15 +273,16 @@ public class RecommendationService {
                     );
 
             for (EventSimilarity similarity : similarities) {
-                Long similarEvent = similarity.getEventA().equals(interaction.getEventId())
-                        ? similarity.getEventB()
-                        : similarity.getEventA();
+                Long similarEvent = similarity.getFirstEvent().equals(interaction.getEventId())
+                        ? similarity.getSecondEvent()
+                        : similarity.getFirstEvent();
 
-                double score = interaction.getActionWeight() * similarity.getSimilarityScore();
+                double score = interaction.getUserScore() * similarity.getScore();
                 candidates.merge(similarEvent, score, Double::sum);
             }
         }
 
+        // 4. Топ-N
         return candidates.entrySet().stream()
                 .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
                 .limit(maxResults)
@@ -294,8 +299,8 @@ public class RecommendationService {
         Map<Long, Double> result = new HashMap<>();
 
         for (Long eventId : eventIds) {
-            Double totalWeight = userInteractionRepository.getTotalWeightForEvent(eventId);
-            result.put(eventId, totalWeight != null ? totalWeight : 0.0);
+            Double totalScore = userInteractionRepository.getTotalScoreForEvent(eventId);
+            result.put(eventId, totalScore != null ? totalScore : 0.0);
         }
 
         return result;

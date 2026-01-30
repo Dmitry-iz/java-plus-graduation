@@ -126,77 +126,52 @@ public class RecommendationsGrpcService extends RecommendationsControllerGrpc.Re
     @Override
     public void getRecommendationsForUser(UserPredictionsRequestProto request,
                                           StreamObserver<RecommendedEventProto> responseObserver) {
-        log.info("gRPC: Recommendations for user {}", request.getUserId());
+        Map<Long, Double> recommendations = recommendationService
+                .getRecommendationsForUser(request.getUserId(), request.getMaxResults());
 
-        try {
-            Map<Long, Double> recommendations = recommendationService
-                    .getRecommendationsForUser(request.getUserId(), request.getMaxResults());
+        recommendations.forEach((eventId, score) -> {
+            responseObserver.onNext(RecommendedEventProto.newBuilder()
+                    .setEventId(eventId)
+                    .setScore(score)
+                    .build());
+        });
 
-            recommendations.forEach((eventId, score) -> {
-                responseObserver.onNext(RecommendedEventProto.newBuilder()
-                        .setEventId(eventId)
-                        .setScore(score)
-                        .build());
-            });
-
-            responseObserver.onCompleted();
-
-        } catch (Exception e) {
-            log.error("gRPC error for user {}", request.getUserId(), e);
-            responseObserver.onError(e);
-        }
+        responseObserver.onCompleted();
     }
 
     @Override
     public void getSimilarEvents(SimilarEventsRequestProto request,
                                  StreamObserver<RecommendedEventProto> responseObserver) {
-        log.info("gRPC: Similar events for event {}, user {}",
-                request.getEventId(), request.getUserId());
+        List<EventSimilarity> similarEvents = recommendationService
+                .getSimilarEvents(request.getEventId(), request.getUserId(), request.getMaxResults());
 
-        try {
-            List<EventSimilarity> similarEvents = recommendationService
-                    .getSimilarEvents(request.getEventId(), request.getUserId(), request.getMaxResults());
+        for (EventSimilarity similarity : similarEvents) {
+            Long similarEventId = similarity.getFirstEvent().equals(request.getEventId())
+                    ? similarity.getSecondEvent()
+                    : similarity.getFirstEvent();
 
-            for (EventSimilarity similarity : similarEvents) {
-                Long similarEventId = similarity.getEventA().equals(request.getEventId())
-                        ? similarity.getEventB()
-                        : similarity.getEventA();
-
-                responseObserver.onNext(RecommendedEventProto.newBuilder()
-                        .setEventId(similarEventId)
-                        .setScore(similarity.getSimilarityScore())
-                        .build());
-            }
-
-            responseObserver.onCompleted();
-
-        } catch (Exception e) {
-            log.error("gRPC error for event {}", request.getEventId(), e);
-            responseObserver.onError(e);
+            responseObserver.onNext(RecommendedEventProto.newBuilder()
+                    .setEventId(similarEventId)
+                    .setScore(similarity.getScore())
+                    .build());
         }
+
+        responseObserver.onCompleted();
     }
 
     @Override
     public void getInteractionsCount(InteractionsCountRequestProto request,
                                      StreamObserver<RecommendedEventProto> responseObserver) {
-        log.info("gRPC: Interactions count for {} events", request.getEventIdList().size());
+        Map<Long, Double> interactions = recommendationService
+                .getInteractionsCount(request.getEventIdList());
 
-        try {
-            Map<Long, Double> interactions = recommendationService
-                    .getInteractionsCount(request.getEventIdList());
+        interactions.forEach((eventId, score) -> {
+            responseObserver.onNext(RecommendedEventProto.newBuilder()
+                    .setEventId(eventId)
+                    .setScore(score)
+                    .build());
+        });
 
-            interactions.forEach((eventId, score) -> {
-                responseObserver.onNext(RecommendedEventProto.newBuilder()
-                        .setEventId(eventId)
-                        .setScore(score)
-                        .build());
-            });
-
-            responseObserver.onCompleted();
-
-        } catch (Exception e) {
-            log.error("gRPC error getting interactions", e);
-            responseObserver.onError(e);
-        }
+        responseObserver.onCompleted();
     }
 }

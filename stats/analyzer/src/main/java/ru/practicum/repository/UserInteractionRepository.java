@@ -41,19 +41,27 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.practicum.model.UserInteraction;
+import ru.practicum.model.UserInteractionId;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface UserInteractionRepository extends JpaRepository<UserInteraction, Long> {
+public interface UserInteractionRepository extends JpaRepository<UserInteraction, UserInteractionId> {
 
-    Optional<UserInteraction> findByUserIdAndEventId(Long userId, Long eventId);
+    // Найти взаимодействие пользователя с событием
+    default Optional<UserInteraction> findByUserAndEvent(Long userId, Long eventId) {
+        return findById(new UserInteractionId(userId, eventId));
+    }
 
-    List<UserInteraction> findByUserId(Long userId);
+    // Найти все взаимодействия пользователя
+    @Query("SELECT ui FROM UserInteraction ui WHERE ui.userId = :userId")
+    List<UserInteraction> findByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT COALESCE(SUM(ui.actionWeight), 0.0) FROM UserInteraction ui WHERE ui.eventId = :eventId")
-    Double getTotalWeightForEvent(@Param("eventId") Long eventId);
+    // Получить сумму оценок для события
+    @Query("SELECT COALESCE(SUM(ui.userScore), 0.0) FROM UserInteraction ui WHERE ui.eventId = :eventId")
+    Double getTotalScoreForEvent(@Param("eventId") Long eventId);
 
-    @Query("SELECT ui FROM UserInteraction ui WHERE ui.userId = :userId ORDER BY ui.lastActionTimestamp DESC")
+    // Найти последние взаимодействия пользователя
+    @Query("SELECT ui FROM UserInteraction ui WHERE ui.userId = :userId ORDER BY ui.timestampAction DESC")
     List<UserInteraction> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 }

@@ -111,11 +111,12 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 import ru.practicum.model.EventSimilarity;
+import ru.practicum.model.EventSimilarityId;
 import ru.practicum.model.UserInteraction;
+import ru.practicum.model.UserInteractionId;
 import ru.practicum.repository.EventSimilarityRepository;
 import ru.practicum.repository.UserInteractionRepository;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -130,33 +131,33 @@ public class DatabaseUpdater {
     @Transactional
     public void updateUserInteraction(UserActionAvro userAction) {
         try {
+            LocalDateTime timestamp = LocalDateTime.ofInstant(
+                    userAction.getTimestamp(),
+                    ZoneId.systemDefault()
+            );
+
             double weight = getWeight(userAction.getActionType().toString());
 
-            userInteractionRepository.findByUserIdAndEventId(
+            var existing = userInteractionRepository.findByUserAndEvent(
                     userAction.getUserId(),
                     userAction.getEventId()
-            ).ifPresentOrElse(
-                    existing -> {
-                        if (weight > existing.getActionWeight()) {
-                            existing.setActionWeight(weight);
-                            existing.setLastActionTimestamp(toLocalDateTime(userAction.getTimestamp()));
-                            log.debug("Updated interaction: userId={}, eventId={}, weight={}",
-                                    userAction.getUserId(), userAction.getEventId(), weight);
-                        }
-                    },
-                    () -> {
-                        UserInteraction newInteraction = UserInteraction.builder()
-                                .userId(userAction.getUserId())
-                                .eventId(userAction.getEventId())
-                                .actionWeight(weight)
-                                .lastActionTimestamp(toLocalDateTime(userAction.getTimestamp()))
-                                .createdAt(LocalDateTime.now())
-                                .build();
-                        userInteractionRepository.save(newInteraction);
-                        log.debug("Created interaction: userId={}, eventId={}, weight={}",
-                                userAction.getUserId(), userAction.getEventId(), weight);
-                    }
             );
+
+            if (existing.isPresent()) {
+                UserInteraction interaction = existing.get();
+                if (weight > interaction.getUserScore()) {
+                    interaction.setUserScore(weight);
+                    interaction.setTimestampAction(timestamp);
+                }
+            } else {
+                UserInteraction newInteraction = UserInteraction.builder()
+                        .userId(userAction.getUserId())
+                        .eventId(userAction.getEventId())
+                        .userScore(weight)
+                        .timestampAction(timestamp)
+                        .build();
+                userInteractionRepository.save(newInteraction);
+            }
 
         } catch (Exception e) {
             log.error("Error updating user interaction", e);
@@ -172,32 +173,23 @@ public class DatabaseUpdater {
             long first = Math.min(eventA, eventB);
             long second = Math.max(eventA, eventB);
 
-            eventSimilarityRepository.findByEventAAndEventB(first, second)
-                    .ifPresentOrElse(
-                            existing -> {
-                                existing.setSimilarityScore(similarity.getScore());
-                                existing.setCalculatedAt(toLocalDateTime(similarity.getTimestamp()));
-                                log.debug("Updated similarity: {} - {} = {}", first, second, similarity.getScore());
-                            },
-                            () -> {
-                                EventSimilarity newSimilarity = EventSimilarity.builder()
-                                        .eventA(first)
-                                        .eventB(second)
-                                        .similarityScore(similarity.getScore())
-                                        .calculatedAt(toLocalDateTime(similarity.getTimestamp()))
-                                        .build();
-                                eventSimilarityRepository.save(newSimilarity);
-                                log.debug("Created similarity: {} - {} = {}", first, second, similarity.getScore());
-                            }
-                    );
+            var existing = eventSimilarityRepository.findByOrderedEvents(first, second);
+
+            if (existing.isPresent()) {
+                EventSimilarity eventSimilarity = existing.get();
+                eventSimilarity.setScore(similarity.getScore());
+            } else {
+                EventSimilarity newSimilarity = EventSimilarity.builder()
+                        .firstEvent(first)
+                        .secondEvent(second)
+                        .score(similarity.getScore())
+                        .build();
+                eventSimilarityRepository.save(newSimilarity);
+            }
 
         } catch (Exception e) {
             log.error("Error updating event similarity", e);
         }
-    }
-
-    private LocalDateTime toLocalDateTime(Instant instant) {
-        return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
 
     private double getWeight(String actionType) {
