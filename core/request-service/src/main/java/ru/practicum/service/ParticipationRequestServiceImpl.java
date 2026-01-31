@@ -20,6 +20,7 @@ import ru.practicum.exception.NotFoundException;
 import ru.practicum.mapper.ParticipationRequestMapper;
 import ru.practicum.model.ParticipationRequest;
 import ru.practicum.repository.ParticipationRequestRepository;
+import ru.practicum.statsclient.client.CollectorClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final EventClient eventClient;
     private final ParticipationRequestRepository requestRepository;
     private final ParticipationRequestMapper requestMapper;
+    private final CollectorClient collectorClient;
 
     @Override
     @Transactional
@@ -87,6 +89,16 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         ParticipationRequest saved = requestRepository.save(request);
         log.info("Request saved: id={}, created={}", saved.getId(), saved.getCreated());
+
+        if (status == CONFIRMED) {
+            try {
+                collectorClient.sendRegisterAction(userId, eventId);
+                log.info("Sent REGISTER action for user {} event {}", userId, eventId);
+            } catch (Exception e) {
+                log.error("Failed to send REGISTER action to Collector: userId={}, eventId={}",
+                        userId, eventId, e);
+            }
+        }
 
         ParticipationRequestDto dto = requestMapper.toDto(saved);
 
@@ -235,9 +247,29 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         for (ParticipationRequest request : requests) {
             if (shouldAutoConfirm(event)) {
                 confirmRequest(request, confirmed);
+
+                try {
+                    collectorClient.sendRegisterAction(request.getRequesterId(), request.getEventId());
+                    log.info("Sent REGISTER action for user {} event {}",
+                            request.getRequesterId(), request.getEventId());
+                } catch (Exception e) {
+                    log.error("Failed to send REGISTER action for user {} event {}",
+                            request.getRequesterId(), request.getEventId(), e);
+                }
+
             } else if (available > 0) {
                 confirmRequest(request, confirmed);
                 available--;
+
+                try {
+                    collectorClient.sendRegisterAction(request.getRequesterId(), request.getEventId());
+                    log.info("Sent REGISTER action for user {} event {}",
+                            request.getRequesterId(), request.getEventId());
+                } catch (Exception e) {
+                    log.error("Failed to send REGISTER action for user {} event {}",
+                            request.getRequesterId(), request.getEventId(), e);
+                }
+
             } else {
                 rejectRequest(request, rejected);
             }

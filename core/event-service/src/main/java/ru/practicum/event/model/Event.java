@@ -84,7 +84,7 @@ public class Event {
     @Builder.Default
     private Integer confirmedRequests = 0;
 
-    @Transient
     @Builder.Default
-    private Long views = 0L;
+    @Column(name = "rating", nullable = false)
+    private Double rating = 0.0;
 }

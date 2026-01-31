@@ -27,7 +27,8 @@ spring:
             - Path=/admin/categories/**, /categories/**,
               /admin/compilations/**, /compilations/**,
               /admin/events/**, /users/{userId}/events/**,
-              /events/**
+              /events/**, /events/recommendations,
+              /events/{eventId}/like
 
         # User Service
         - id: user_service_route
