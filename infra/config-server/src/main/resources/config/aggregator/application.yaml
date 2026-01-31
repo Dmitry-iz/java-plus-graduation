@@ -1,19 +1,8 @@
-spring:
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: action-group
-      auto-offset-reset: earliest
-      enable-auto-commit: false
-
 kafka:
-  action-topic: stats.user-actions.v1
-  similarity-topic: stats.events-similarity.v1
-
-user-action:
-  view: 0.4
-  register: 0.8
-  like: 1.0
+  settings:
+    url: "localhost:9092"
+    action: "stats.user-actions.v1"
+    similarity: "stats.events-similarity.v1"
 
 logging:
   level:
