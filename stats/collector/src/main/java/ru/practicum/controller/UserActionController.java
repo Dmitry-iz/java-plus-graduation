@@ -8,8 +8,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import ru.practicum.grpc.stats.action.UserActionProto;
-import ru.practicum.grpc.stats.collector.UserActionControllerGrpc;
+
+import ru.practicum.ewm.stats.proto.UserActionControllerGrpc;
+import ru.practicum.ewm.stats.proto.UserActionProto;
 import ru.practicum.service.UserActionHandler;
 
 @Slf4j

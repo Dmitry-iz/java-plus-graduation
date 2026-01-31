@@ -21,6 +21,7 @@ import ru.practicum.dto.event.EventDtoOut;
 import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.dto.event.EventUpdateDto;
 import ru.practicum.event.service.EventService;
+import ru.practicum.statsclient.client.CollectorClient;
 
 import java.util.List;
 
@@ -32,6 +33,7 @@ import java.util.List;
 public class PrivateEventController {
 
     private final EventService eventService;
+    private final CollectorClient collectorClient;
 
     @GetMapping("/{userId}/events")
     public List<EventShortDtoOut> getEventsCreatedByUser(
@@ -72,6 +74,6 @@ public class PrivateEventController {
     public void likeEvent(@PathVariable @Min(1) Long userId,
                           @PathVariable @Min(1) Long eventId) {
         log.info("User {} likes event {}", userId, eventId);
-        eventService.likeEvent(userId, eventId);
+        eventService.sendLikeAction(userId, eventId);
     }
 }

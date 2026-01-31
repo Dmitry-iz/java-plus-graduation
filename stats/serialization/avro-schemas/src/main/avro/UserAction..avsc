@@ -4,15 +4,15 @@
   "name": "UserActionAvro",
   "fields": [
     {
-      "name": "userId",
+      "name": "user_id",
       "type": "long"
     },
     {
-      "name": "eventId",
+      "name": "event_id",
       "type": "long"
     },
     {
-      "name": "actionType",
+      "name": "action_type",
       "type": {
         "type": "enum",
         "name": "ActionTypeAvro",

@@ -30,7 +30,13 @@ spring:
     banner-mode: off
     log-startup-info: false
 
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.hibernate.SQL: DEBUG
+
 kafka:
+  # Spring Kafka настройки (для стандартной конфигурации)
   bootstrap-servers: localhost:9092
   consumer:
     group-id: analyzer-group
@@ -40,7 +46,8 @@ kafka:
   properties:
     spring.json.trusted.packages: "*"
 
-logging:
-  level:
-    ru.practicum: DEBUG
-    org.hibernate.SQL: DEBUG
+  # Настройки для KafkaSettingsConfig
+  settings:
+    url: "localhost:9092"
+    action: "stats.user-actions.v1"
+    similarity: "stats.events-similarity.v1"

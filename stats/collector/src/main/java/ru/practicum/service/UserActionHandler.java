@@ -8,7 +8,8 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.stereotype.Service;
 import ru.practicum.config.KafkaSettingsConfig;
-import ru.practicum.grpc.stats.action.UserActionProto;
+
+import ru.practicum.ewm.stats.proto.UserActionProto;
 import ru.practicum.mapper.UserActionMapper;
 
 @Slf4j

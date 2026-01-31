@@ -1,5 +1,6 @@
 package ru.practicum.event.controller;
 
+import com.google.protobuf.Timestamp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -18,8 +19,12 @@ import ru.practicum.dto.event.EventShortDtoOut;
 import ru.practicum.enums.EventState;
 import ru.practicum.event.model.EventFilter;
 import ru.practicum.event.service.EventService;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import ru.practicum.ewm.stats.proto.UserActionProto;
 import ru.practicum.exception.InvalidRequestException;
+import ru.practicum.statsclient.client.CollectorClient;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,6 +38,7 @@ import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 public class PublicEventController {
 
     private final EventService eventService;
+    private final CollectorClient collectorClient;
 
     @GetMapping
     public List<EventShortDtoOut> getEvents(
@@ -70,17 +76,46 @@ public class PublicEventController {
         return eventService.findShortEventsBy(filter);
     }
 
+//    @GetMapping("/{eventId}")
+//    public EventDtoOut get(@PathVariable @Min(1) Long eventId,
+//                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId,
+//                           HttpServletRequest request) {
+//        log.info("=== PUBLIC EVENT CONTROLLER: Processing event {} for user {} ===", eventId, userId);
+//
+//        if (userId != null && userId > 0) {
+//            return eventService.findPublishedWithUser(eventId, userId);
+//        } else {
+//            return eventService.findPublished(eventId);
+//        }
+//    }
+
+
     @GetMapping("/{eventId}")
     public EventDtoOut get(@PathVariable @Min(1) Long eventId,
-                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId,
-                           HttpServletRequest request) {
-        log.info("=== PUBLIC EVENT CONTROLLER: Processing event {} for user {} ===", eventId, userId);
+                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId) {
+
+        log.info("Обработка события {} для пользователя {}", eventId, userId);
 
         if (userId != null && userId > 0) {
-            return eventService.findPublishedWithUser(eventId, userId);
-        } else {
-            return eventService.findPublished(eventId);
+            try {
+                Instant now = Instant.now();
+                UserActionProto action = UserActionProto.newBuilder()
+                        .setUserId(userId)
+                        .setEventId(eventId)
+                        .setActionType(ActionTypeProto.ACTION_VIEW)
+                        .setTimestamp(Timestamp.newBuilder()
+                                .setSeconds(now.getEpochSecond())
+                                .setNanos(now.getNano())
+                                .build())
+                        .build();
+                collectorClient.sendUserAction(action);
+                log.debug("Отправлен VIEW от пользователя {} для события {}", userId, eventId);
+            } catch (Exception e) {
+                log.warn("Не удалось отправить VIEW: {}", e.getMessage());
+            }
         }
+
+        return eventService.findPublished(eventId);
     }
 
     @GetMapping("/recommendations")

@@ -9,7 +9,8 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class EventSimilarityId implements Serializable {
-    Long first;
-    Long second;
+public class UserActionId implements Serializable {
+    Long userId;
+    Long eventId;
 }
+
