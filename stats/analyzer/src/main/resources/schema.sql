@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS event_similarities (
     PRIMARY KEY(first_event, second_event)
 );
 
-CREATE TABLE IF NOT EXISTS user_interactions (
+CREATE TABLE IF NOT EXISTS user_actions (
     user_id BIGINT NOT NULL,
     event_id BIGINT NOT NULL,
     user_score DOUBLE PRECISION NOT NULL,
