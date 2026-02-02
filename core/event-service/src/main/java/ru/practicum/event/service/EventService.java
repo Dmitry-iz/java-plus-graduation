@@ -89,4 +89,6 @@ public interface EventService {
     List<EventShortDtoOut> getEventsByIds(List<Long> eventIds);
 
     List<EventDtoOut> getFullEventsByIds(List<Long> eventIds);
+
+    EventDtoOut findPublishedWithUser(Long eventId, Long userId);
 }

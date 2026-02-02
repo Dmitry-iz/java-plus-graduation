@@ -42,7 +42,7 @@ public class ParticipationRequestController {
 //        return new ResponseEntity<>(createdRequest, HttpStatus.CREATED);
 //    }
 
-    @PostMapping("/{userId}/requests")
+    @PostMapping("/users/{userId}/requests")
     @ResponseStatus(HttpStatus.CREATED)
     public ParticipationRequestDto createRequest(@PathVariable @Min(1) Long userId,
                                                  @RequestParam @Min(1) Long eventId) {
