@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.dto.event.EventDtoOut;
 import ru.practicum.dto.event.EventShortDtoOut;
-import ru.practicum.dto.stats.EndpointHitDTO;
 import ru.practicum.enums.EventState;
 import ru.practicum.event.model.EventFilter;
 import ru.practicum.event.service.EventService;
@@ -29,7 +28,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.hibernate.validator.internal.engine.messageinterpolation.el.RootResolver.FORMATTER;
 import static ru.practicum.constants.Constants.DATE_TIME_FORMAT;
 
 @Slf4j
@@ -78,19 +76,6 @@ public class PublicEventController {
         return eventService.findShortEventsBy(filter);
     }
 
-//    @GetMapping("/{eventId}")
-//    public EventDtoOut get(@PathVariable @Min(1) Long eventId,
-//                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId,
-//                           HttpServletRequest request) {
-//        log.info("=== PUBLIC EVENT CONTROLLER: Processing event {} for user {} ===", eventId, userId);
-//
-//        if (userId != null && userId > 0) {
-//            return eventService.findPublishedWithUser(eventId, userId);
-//        } else {
-//            return eventService.findPublished(eventId);
-//        }
-//    }
-
     @GetMapping("/{eventId}")
     public EventDtoOut get(@PathVariable @Min(1) Long eventId,
                            @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId) {
@@ -115,42 +100,11 @@ public class PublicEventController {
                 log.warn("Не удалось отправить VIEW: {}", e.getMessage());
             }
 
-            // Используем новый метод с рейтингом
             return eventService.findPublishedWithUser(eventId, userId);
         } else {
-            // Для анонимных пользователей - старый метод
             return eventService.findPublished(eventId);
         }
     }
-
-
-//    @GetMapping("/{eventId}")
-//    public EventDtoOut get(@PathVariable @Min(1) Long eventId,
-//                           @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId) {
-//
-//        log.info("Обработка события {} для пользователя {}", eventId, userId);
-//
-//        if (userId != null && userId > 0) {
-//            try {
-//                Instant now = Instant.now();
-//                UserActionProto action = UserActionProto.newBuilder()
-//                        .setUserId(userId)
-//                        .setEventId(eventId)
-//                        .setActionType(ActionTypeProto.ACTION_VIEW)
-//                        .setTimestamp(Timestamp.newBuilder()
-//                                .setSeconds(now.getEpochSecond())
-//                                .setNanos(now.getNano())
-//                                .build())
-//                        .build();
-//                collectorClient.sendUserAction(action);
-//                log.debug("Отправлен VIEW от пользователя {} для события {}", userId, eventId);
-//            } catch (Exception e) {
-//                log.warn("Не удалось отправить VIEW: {}", e.getMessage());
-//            }
-//        }
-//
-//        return eventService.findPublished(eventId);
-//    }
 
     @GetMapping("/recommendations")
     public List<EventShortDtoOut> getRecommendations(

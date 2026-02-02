@@ -33,15 +33,6 @@ public class ParticipationRequestController {
     private final ParticipationRequestService requestService;
     private final CollectorClient collectorClient;
 
-//    @PostMapping("/users/{userId}/requests")
-//    public ResponseEntity<ParticipationRequestDto> createRequest(
-//            @PathVariable Long userId,
-//            @RequestParam Long eventId) {
-//
-//        ParticipationRequestDto createdRequest = requestService.createRequest(userId, eventId);
-//        return new ResponseEntity<>(createdRequest, HttpStatus.CREATED);
-//    }
-
     @PostMapping("/users/{userId}/requests")
     @ResponseStatus(HttpStatus.CREATED)
     public ParticipationRequestDto createRequest(@PathVariable @Min(1) Long userId,
