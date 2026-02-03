@@ -20,6 +20,7 @@ import ru.practicum.exception.NotFoundException;
 import ru.practicum.mapper.ParticipationRequestMapper;
 import ru.practicum.model.ParticipationRequest;
 import ru.practicum.repository.ParticipationRequestRepository;
+import ru.practicum.statsclient.client.CollectorClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final EventClient eventClient;
     private final ParticipationRequestRepository requestRepository;
     private final ParticipationRequestMapper requestMapper;
+    private final CollectorClient collectorClient;
 
     @Override
     @Transactional
@@ -87,6 +89,10 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         ParticipationRequest saved = requestRepository.save(request);
         log.info("Request saved: id={}, created={}", saved.getId(), saved.getCreated());
+
+        if (status == CONFIRMED) {
+            sendRegisterActionAsync(userId, eventId);
+        }
 
         ParticipationRequestDto dto = requestMapper.toDto(saved);
 
@@ -235,9 +241,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         for (ParticipationRequest request : requests) {
             if (shouldAutoConfirm(event)) {
                 confirmRequest(request, confirmed);
+                sendRegisterActionAsync(request.getRequesterId(), request.getEventId());
             } else if (available > 0) {
                 confirmRequest(request, confirmed);
                 available--;
+                sendRegisterActionAsync(request.getRequesterId(), request.getEventId());
             } else {
                 rejectRequest(request, rejected);
             }
@@ -311,5 +319,17 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         event.setParticipantLimit(10);
         event.setRequestModeration(true);
         return event;
+    }
+
+    private void sendRegisterActionAsync(Long userId, Long eventId) {
+        new Thread(() -> {
+            try {
+                collectorClient.sendRegisterAction(userId, eventId);
+                log.info("Sent REGISTER action for user {} event {}", userId, eventId);
+            } catch (Exception e) {
+                log.warn("Failed to send REGISTER action (async): user={}, event={}, error={}",
+                        userId, eventId, e.getMessage());
+            }
+        }).start();
     }
 }
